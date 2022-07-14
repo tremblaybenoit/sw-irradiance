@@ -2,3 +2,4 @@
 *.json
 *.pdf
 *.gif
+data/EVE/raw/*.npy
