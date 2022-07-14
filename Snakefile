@@ -1,21 +1,19 @@
 #########################################################################################################
 ##SETUP AND GENERATE TRAINING DATA
 #########################################################################################################
-
 configfile:"config_residuals/anet_3_bn_15.json"
 
-# wavelengths = ["171","193","211","304"]
 
-##finds corresponding eve data given path to aia files
+## finds corresponding eve data given path to aia files
+## make sure the output path matches your user home folder
 rule generate_matches_time:
     input:
         eve_path = "/home/miraflorista/sw-irradiance/data/EVE/EVE.json",
-        aia_path = "/mnt/miniset/aia",
-        wavelength = "171"
+        aia_path = "/mnt/aia-jsoc"
     output:
-        "/home/miraflorista/sw-irradiance/data/"
+        directory("/home/benoit_tremblay_23/sw-irr-output")
     shell:
-        "python canonical_data/generate_matches_time.py -eve_path {input.eve_path} -aia_path {input.aia_path} -out_path {output[0]} -wavelengths input.wavelength "
+        "python canonical_data/generate_matches_time.py -eve_path {input.eve_path} -aia_path {input.aia_path} -out_path {output} -debug"
 
 ## generates train, test, values datasets 
 rule make_train_val_test_sets:
@@ -24,16 +22,22 @@ rule make_train_val_test_sets:
     output:
         new_target="target.csv",
         new_model="model.csv",
-    script:
-        "canonical_data/make_train_val_test_sets.py"
+    shell:
+        "python canonical_data/make_train_val_test_sets.py"
 
 
 rule make_normalize:
     input:
         matches = "/home/miraflorista/sw-irradiance/data/matches_aia_eve.csv"
     output:
-        mean= "aia_sqrt_mean.npy",
-        std= "aia_sqrt_std.npy"
+        eve_mean= "eve_mean.npy",
+        eve_std= "eve_std.npy",
+        eve_sqrt_mean= "eve_sqrt_mean.npy",
+        eve_sqrt_std= "eve_sqrt_std.npy",
+        aia_mean= "aia_mean.npy",
+        aia_std= "aia_std.npy",
+        aia_sqrt_mean= "aia_sqrt_mean.npy",
+        aia_sqrt_std= "aia_sqrt_std.npy"
     script:
         "canonical_data/make_normalize.py"
 
