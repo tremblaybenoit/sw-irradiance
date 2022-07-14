@@ -13,11 +13,11 @@ eve_wl = np.load("/home/miraflorista/sw-irradiance/data/EVE/raw/wavelength.npy",
 
 eve= {
   "metadata":{
-    "raw_dates":eve_date.tolist(),
-    "jd":eve_jd.tolist(),
-    "logt":eve_logt.tolist(),
-    "name":eve_name.tolist(),
-    "wavelength":eve_wl.tolist()
+    "raw_dates":eve_date.tolist(), #iso format dates
+    "jd":eve_jd.tolist(), #julian dates
+    "logt":eve_logt.tolist(), #temperature
+    "name":eve_name.tolist(), #name of channel
+    "wavelength":eve_wl.tolist() #wavelength
   },
   "data":eve_irr.tolist()
 }
