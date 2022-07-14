@@ -72,7 +72,9 @@ def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve
         match.insert(i+2, 'AIA'+wavelengths[i], aia_selections[i], True)
 
     # Save
-    filename = output_path+'matches_eve_aia'
+    if not os.path.exists(output_path):
+        os.makedirs(output_path, exist_ok=True)
+    filename = output_path+'/matches_eve_aia'
     for i in wavelengths:
         filename = filename+'_'+i
     match.to_csv(filename+'.csv', index=False)
@@ -86,7 +88,7 @@ if __name__ == "__main__":
                    help='eve_path')
     p.add_argument('-aia_path', type=str, default="/mnt/aia-jsoc",
                    help='aia_path')
-    p.add_argument('-out_path', type=str, default="/home/benoit_tremblay_23/",
+    p.add_argument('-out_path', type=str, default="/home/benoit_tremblay_23",
                    help='out_path')
     p.add_argument('-wavelengths', type=str, default=['171', '193', '211', '304'],
                    help='wavelengths')
