@@ -11,16 +11,16 @@ rule generate_matches_time:
     input:
         eve_path = "/home/miraflorista/sw-irradiance/data/EVE/EVE.json",
         aia_path = "/mnt/miniset/aia",
-        wavelengths = "171"
+        wavelength = "171"
     output:
         "/home/miraflorista/sw-irradiance/data/"
     shell:
-        "python canonical_data/generate_matches_time.py -eve_path {input.eve_path} -aia_path {input.aia_path} -out_path {output[0]} -wavelengths wavelength "
+        "python canonical_data/generate_matches_time.py -eve_path {input.eve_path} -aia_path {input.aia_path} -out_path {output[0]} -wavelengths input.wavelength "
 
 ## generates train, test, values datasets 
 rule make_train_val_test_sets:
     input:
-        matches = "/home/miraflorista/sw-irradiance/data/matches.csv"
+        matches = "/home/miraflorista/sw-irradiance/data/matches_aia_eve.csv"
     output:
         new_target="target.csv",
         new_model="model.csv",
@@ -30,12 +30,12 @@ rule make_train_val_test_sets:
 
 rule make_normalize:
     input:
-        matches = "/home/miraflorista/sw-irradiance/data/matches.csv"
+        matches = "/home/miraflorista/sw-irradiance/data/matches_aia_eve.csv"
     output:
         mean= "aia_sqrt_mean.npy",
         std= "aia_sqrt_std.npy"
     script:
-        "canonical_data/make_normalize"
+        "canonical_data/make_normalize.py"
 
 #########################################################################################################
 ##TEST AND TRAIN MODEL
@@ -52,7 +52,7 @@ rule fit_linear_model:
         means="eve_residual_mean_14ptot.npy",
         stds="eve_residual_std_14ptot.npy"
     shell:
-        "python canonical_code/setup_residual_totirr"
+        "python canonical_code/setup_residual_totirr.py"
 
 ## train CNN
 rule train_CNN:
