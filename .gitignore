@@ -1,4 +1,4 @@
-.snakemake/*.log
+.snakemake/log/*.log
 *.json
 *.pdf
 *.gif
