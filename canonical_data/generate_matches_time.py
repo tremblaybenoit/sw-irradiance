@@ -9,7 +9,7 @@ import datetime
 import argparse
 
 
-def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve = 10, cutoff_aia = 10*60):
+def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve = 10, cutoff_aia = 10*60, debug=True):
     """_summary_
 
     Args:
@@ -18,6 +18,7 @@ def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve
         output_path (str): path to store output csv file
         wavelengths: list of wavelengths that are needed
         cutoff_seconds(int): cutoff for time delta (difference between AIA and EVE file in time) in seconds
+        debug (bool): Only do 10 AIA matches 
 
     Returns:
         csv: csv with aia filenames, aia iso dates, eve iso dates, eve indices, and time deltas
@@ -26,20 +27,18 @@ def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve
     nb_wavelengths = len(wavelengths)
 
     # List of filenames, per wavelength
-    aia_filenames = [[os.path.basename(f) for f in sorted(glob.glob(aia_path+'/aia_lev1_%sa_*.fits' % (wl)))] for wl in wavelengths]
+    aia_filenames = [[os.path.basename(f) for f in sorted(glob.glob(aia_path+'/%s/aia%s_*.fits' % (wl, wl)))] for wl in wavelengths]
 
     eve = json.load(open(eve_path)) #loading dictionary with eve data
     pbar_convert_dates = tqdm(eve["metadata"]["raw_dates"])
     eve["metadata"]["iso_dates"] = [dt.isoparse(i) for i in pbar_convert_dates]
 
-    #aia171_dates = ["".join(name.split("_")[3:8])+"z" for name in aia_filenames[0]]
-    #aia193_dates = ["".join(name.split("_")[3:8])+"z" for name in aia_filenames[1]]
-    #aia211_dates = ["".join(name.split("_")[3:8])+"z" for name in aia_filenames[2]]
-    #aia304_dates = ["".join(name.split("_")[3:8])+"z" for name in aia_filenames[3]]
+    aia_dates = [[name.split("_")[-1].split('.')[0]+'z' for name in aia_filenames[i]] for i in range(nb_wavelengths)]
 
-    aia_dates = [["".join(name.split("_")[3:8])+"z" for name in aia_filenames[i]] for i in range(nb_wavelengths)]
-
-    aia_iso_dates = [[dt.isoparse(date) for date in aia_dates[i]] for i in range(nb_wavelengths)]
+    if debug:
+        aia_iso_dates = [[dt.isoparse(date) for date in aia_dates[i][0:10]] for i in range(nb_wavelengths)]
+    else:
+        aia_iso_dates = [[dt.isoparse(date) for date in aia_dates[i]] for i in range(nb_wavelengths)]
 
     #creating empty repos to store results of match and times
     eve_res = []
@@ -80,12 +79,12 @@ def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve
 
 if __name__ == "__main__":
 
-    # Commands
+    # Commands 
     p = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     p.add_argument('-eve_path', type=str, default="/home/miraflorista/sw-irradiance/data/EVE/EVE.json",
                    help='eve_path')
-    p.add_argument('-aia_path', type=str, default="/mnt/miniset/aia",
+    p.add_argument('-aia_path', type=str, default="/mnt/aia-jsoc",
                    help='aia_path')
     p.add_argument('-out_path', type=str, default="/home/benoit_tremblay_23/",
                    help='out_path')
@@ -95,6 +94,8 @@ if __name__ == "__main__":
                    help='cutoff_eve')
     p.add_argument('-cutoff_aia', type=float, default=600,
                    help='cutoff_aia')
+    p.add_argument('-debug', action='store_true',
+                   help='Debug flag')
     args = p.parse_args()
 
     eve_path = args.eve_path
@@ -103,7 +104,8 @@ if __name__ == "__main__":
     wavelengths = args.wavelengths
     cutoff_eve = args.cutoff_eve
     cutoff_aia = args.cutoff_aia
+    debug_flag = args.debug
 
-    matches = generate_time_matches(aia_path,eve_path, out_path, wavelengths, cutoff_eve=cutoff_eve, cutoff_aia=cutoff_aia)
+    matches = generate_time_matches(aia_path,eve_path, out_path, wavelengths, cutoff_eve=cutoff_eve, cutoff_aia=cutoff_aia, debug=debug_flag)
 
 
