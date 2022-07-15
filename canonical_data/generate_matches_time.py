@@ -65,6 +65,8 @@ def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve
     aia_idx = [[(aia_iso_dates[i]).index(date) for date in aia_res[i]] for i in range(nb_wavelengths)]
     aia_selections = [[aia_filenames[j][i] for i in aia_idx[j]] for j in range(nb_wavelengths)]
     
+    eve["data"]
+
     match = pd.DataFrame({"eve_indices": eve_idx, 
                           "eve_dates":eve_res,
                           "time_delta":eve_times})
