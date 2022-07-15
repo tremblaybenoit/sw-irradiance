@@ -11,36 +11,42 @@ rule create_eve_json:
     input:
         eve_raw_path= "/home/miraflorista/sw-irradiance/data/EVE/raw/",
     output:
-        eve_json_path= "/home/benoit_tremblay_23/sw-irr-output/EVE.json",
+        eve_json_path= "/home/andres_munoz_j/sw-irr-output/EVE.json",
     shell:
         "python canonical_data/fdl22_create_eve_json.py -eve_raw_path {input.eve_raw_path} -json_outpath {output.eve_json_path}"
 
+
+## generates matches between EVE data and the AIA files
 rule generate_matches_time:
     input:
-        eve_json_path = "/home/benoit_tremblay_23/sw-irr-output/EVE.json",
+        eve_json_path = "/home/andres_munoz_j/sw-irr-output/EVE.json",
         aia_path = "/mnt/aia-jsoc"
+    params:
+        match_outpath = "/home/andres_munoz_j/sw-irr-output"
     output:
-        match_outpath =directory("/home/benoit_tremblay_23/sw-irr-output")
+        matches_output = "/home/andres_munoz_j/sw-irr-output/matches_eve_aia_171_193_211_304.csv"
     shell:
-        "python canonical_data/fdl22_generate_matches_time.py -eve_path {input.eve_json_path} -aia_path {input.aia_path} -out_path {output.match_outpath} -debug"
+        "python canonical_data/fdl22_generate_matches_time.py -eve_path {input.eve_json_path} -aia_path {input.aia_path} -out_path {params.match_outpath} -debug"
+
 
 ## generates train, test, values datasets 
 rule make_train_val_test_sets:
     input:
-        matches="/home/benoit_tremblay_23/sw-irr-output/matches_eve_aia_171_193_211_304.csv"
+        matches="/home/andres_munoz_j/sw-irr-output/matches_eve_aia_171_193_211_304.csv"
     output:
-        train = "/home/benoit_tremblay_23/sw-irr-output/train.csv",
-        val = "/home/benoit_tremblay_23/sw-irr-output/val.csv",
-        test = "/home/benoit_tremblay_23/sw-irr-output/test.csv"
+        train = "/home/andres_munoz_j/sw-irr-output/train.csv",
+        val = "/home/andres_munoz_j/sw-irr-output/val.csv",
+        test = "/home/andres_munoz_j/sw-irr-output/test.csv"
     shell:
         "python canonical_data/fdl18_make_splits.py --src {input.matches} --splits rve"
 
 
+# Creates the normalization values based on the train set
 rule make_normalize:
     input:
-        matches = "/home/benoit_tremblay_23/sw-irr-output/matches_eve_aia_171_193_211_304.csv",
+        matches = "/home/andres_munoz_j/sw-irr-output/matches_eve_aia_171_193_211_304.csv",
     params:
-        basepath = "/home/benoit_tremblay_23/sw-irr-output/",
+        basepath = "/home/andres_munoz_j/sw-irr-output",
         divide = 4
         # remove_off_limb
         # eve_mean= "eve_mean.npy",
