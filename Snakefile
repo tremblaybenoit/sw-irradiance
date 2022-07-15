@@ -48,17 +48,17 @@ rule make_normalize:
     params:
         basepath = "/home/andres_munoz_j/sw-irr-output",
         divide = 4
-        # remove_off_limb
-        # eve_mean= "eve_mean.npy",
-        # eve_std= "eve_std.npy",
-        # eve_sqrt_mean= "eve_sqrt_mean.npy",
-        # eve_sqrt_std= "eve_sqrt_std.npy",
-        # aia_mean= "aia_mean.npy",
-        # aia_std= "aia_std.npy",
-        # aia_sqrt_mean= "aia_sqrt_mean.npy",
-        # aia_sqrt_std= "aia_sqrt_std.npy"
+    output:
+        eve_mean= "{params.basepath}/eve_mean.npy",
+        eve_std= "{params.basepath}/eve_std.npy",
+        eve_sqrt_mean= "{params.basepath}/eve_sqrt_mean.npy",
+        eve_sqrt_std= "{params.basepath}/eve_sqrt_std.npy",
+        aia_mean= "{params.basepath}/aia_mean.npy",
+        aia_std= "{params.basepath}/aia_std.npy",
+        aia_sqrt_mean= "{params.basepath}/aia_sqrt_mean.npy",
+        aia_sqrt_std= "{params.basepath}/aia_sqrt_std.npy"
     shell:
-        "python canonical_data/make_normalize.py --base {params.basepath} --divide {params.divide}"
+        "python canonical_data/fdl22_make_normalize.py --base {params.basepath} --divide {params.divide}"
 
 #########################################################################################################
 ##TEST AND TRAIN MODEL
@@ -66,11 +66,17 @@ rule make_normalize:
 
 ## fits means and stds to linear model
 rule fit_linear_model:
+    params:
+        basepath = "/home/andres_munoz_j/sw-irr-output",
     input:
-        mean= "aia_sqrt_mean.npy",
-        std= "aia_sqrt_std.npy",
-        new_target="target.csv",
-        new_model="model.csv"
+        eve_mean= "{params.basepath}/eve_mean.npy",
+        eve_std= "{params.basepath}/eve_std.npy",
+        eve_sqrt_mean= "{params.basepath}/eve_sqrt_mean.npy",
+        eve_sqrt_std= "{params.basepath}/eve_sqrt_std.npy",
+        aia_mean= "{params.basepath}/aia_mean.npy",
+        aia_std= "{params.basepath}/aia_std.npy",
+        aia_sqrt_mean= "{params.basepath}/aia_sqrt_mean.npy",
+        aia_sqrt_std= "{params.basepath}/aia_sqrt_std.npy"
     output:
         means="eve_residual_mean_14ptot.npy",
         stds="eve_residual_std_14ptot.npy"
