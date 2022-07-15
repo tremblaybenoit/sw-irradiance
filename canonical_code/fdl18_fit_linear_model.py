@@ -270,6 +270,13 @@ if __name__ == "__main__":
     diffTr = YTr - YTrp; diffTr[maskTr] = 0
     diffVa = YVa - YVap; diffVa[maskVa] = 0
 
+      #new statistics
+    residualMean = np.mean(diffTr,axis=0)   
+    residualStd = np.std(diffTr,axis=0)   
+ 
+    np.save("%s/eve_residual_mean_14ptot.npy" % data_root, residualMean)
+    np.save("%s/eve_residual_std_14ptot.npy" % data_root, residualStd)
+
     save_prediction(eve, line_indices, YTrp, data_root, 'train', debug=debug)
     save_prediction(eve, line_indices, YVap, data_root, 'val', debug=debug)
     save_prediction(eve, line_indices, YTep, data_root, 'test', debug=debug)
@@ -286,13 +293,6 @@ if __name__ == "__main__":
     #     for yii,yi in enumerate(yind):
     #         EVE[yi,xind] = newVals[yii,:]
 
-
-    # #new statistics
-    # residualMean = np.mean(diffTr,axis=0)   
-    # residualStd = np.std(diffTr,axis=0)   
- 
-    # np.save("%s/eve_residual_mean_14ptot.npy" % data_root, residualMean)
-    # np.save("%s/eve_residual_std_14ptot.npy" % data_root, residualStd)
 
     # #rescale targets
     # EVE *= 100
