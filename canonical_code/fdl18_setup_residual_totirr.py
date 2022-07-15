@@ -45,8 +45,8 @@ def handleStd(index_aia_i):
     divide = 4
 
     AIA_sample = np.asarray([np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(loadAIAMap(aia_file).data, (divide, divide)), axis=0) for aia_file in index_aia_i], dtype = np.float64 )
-    X = np.mean(AIA_sample,axis=(1,2,3))
-    X = np.concatenate([X,np.std(AIA_sample,axis=(1,2,3))],axis=0)
+    X = np.nanmean(AIA_sample,axis=(1,2,3))
+    X = np.concatenate([X,np.nanstd(AIA_sample,axis=(1,2,3))],axis=0)
     return np.expand_dims(X,axis=0)
 
 def save_prediction(eve_data, prediction, data_root, split, debug=False):
@@ -69,7 +69,7 @@ def save_prediction(eve_data, prediction, data_root, split, debug=False):
         json.dump(prediction_output, outfile)
 
 
-def getXy(eve_data, data_root, split, debug=False):
+def getXy(eve_data, data_root, split, debug=True):
 
     matches = pd.read_csv(data_root+split+'.csv')
 
@@ -87,7 +87,7 @@ def getXy(eve_data, data_root, split, debug=False):
         fnList.append(row[aia_columns].tolist())
 
     LOG.info('Start process map')
-    Xs = process_map(handleStd, fnList, max_workers=50, chunksize=21)
+    Xs = process_map(handleStd, fnList, max_workers=50, chunksize=3)
 
     X = np.concatenate(Xs,axis=0)
    
@@ -106,6 +106,16 @@ def getResid(y,yp,mask,flare=None,flarePct=0.975):
     return np.nanmean(resid,axis=0)
 
 def fitSGDR_Huber(X,Y,maxIter=10,epsFrac=1.0,logalpha=-4):
+
+    # Remove NaNs
+    finite_mask = np.sum(np.isfinite(Y),axis=1)==14
+    X = X[finite_mask,:]
+    Y = Y[finite_mask,:]
+
+    finite_mask = np.sum(np.isfinite(X),axis=1)==9
+    Y = Y[finite_mask,:]
+    X = X[finite_mask,:]
+
     alpha = 10**logalpha
     K = Y.shape[1]
     models = []
@@ -144,8 +154,8 @@ def cvSGDH(XTr,yTr,XVa,yVa,maskVa):
     return W
 
 def getNormalize(XTr):
-    mu = np.mean(XTr,axis=0)
-    sig = np.std(XTr,axis=0)
+    mu = np.nanmean(XTr,axis=0)
+    sig = np.nanstd(XTr,axis=0)
     sig[sig==0] = 1e-8
 
     return mu, sig
@@ -172,10 +182,11 @@ if __name__ == "__main__":
     eve_data = eve_data[:,line_indices]
 
     #get the data
-    
-    XTr, yTr, maskTr = getXy(eve_data, data_root, "train")
-    XVa, yVa, maskVa = getXy(eve_data, data_root, "val")
-    XTe, ___, ______ = getXy(eve_data, data_root, "test")
+    debug=False
+
+    XTr, yTr, maskTr = getXy(eve_data, data_root, "train", debug=debug)
+    XVa, yVa, maskVa = getXy(eve_data, data_root, "val", debug=debug)
+    XTe, ___, ______ = getXy(eve_data, data_root, "test", debug=debug)
 
     np.savez_compressed("%s/mean_std_feats.npz" % data_root,XTr=XTr,XVa=XVa,XTe=XTe)
 
@@ -196,9 +207,11 @@ if __name__ == "__main__":
     diffTr = yTr - yTrp; diffTr[maskTr] = 0
     diffVa = yVa - yVap; diffVa[maskVa] = 0
 
-    save_prediction(eve_data, yTrp, data_root, 'train', debug=False)
-    save_prediction(eve_data, yVap, data_root, 'val', debug=False)
-    save_prediction(eve_data, yTep, data_root, 'test', debug=False)
+
+
+    save_prediction(eve_data, yTrp, data_root, 'train', debug=debug)
+    save_prediction(eve_data, yVap, data_root, 'val', debug=debug)
+    save_prediction(eve_data, yTep, data_root, 'test', debug=debug)
 
 
     
