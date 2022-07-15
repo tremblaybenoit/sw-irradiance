@@ -11,7 +11,7 @@ rule create_eve_json:
     input:
         eve_raw_path= "/home/miraflorista/sw-irradiance/data/EVE/raw/",
     output:
-        eve_json_path= "/home/andres_munoz_j/sw-irr-output/EVE.json",
+        eve_json_path= "/home/miraflorista/sw-irradiance/data/EVE/EVE.json"
     shell:
         "python canonical_data/fdl22_create_eve_json.py -eve_raw_path {input.eve_raw_path} -json_outpath {output.eve_json_path}"
 
@@ -19,24 +19,23 @@ rule create_eve_json:
 ## generates matches between EVE data and the AIA files
 rule generate_matches_time:
     input:
-        eve_json_path = "/home/andres_munoz_j/sw-irr-output/EVE.json",
+        eve_json_path = "/home/miraflorista/sw-irradiance/data/EVE/EVE.json",
         aia_path = "/mnt/aia-jsoc"
     params:
-        match_outpath = "/home/andres_munoz_j/sw-irr-output"
+        match_outpath = "/home/benoit_tremblay_23/sw-irr-output"
     output:
-        matches_output = "/home/andres_munoz_j/sw-irr-output/matches_eve_aia_171_193_211_304.csv"
+        matches_output = "/home/benoit_tremblay_23/sw-irr-output/matches_eve_aia_171_193_211_304.csv"
     shell:
         "python canonical_data/fdl22_generate_matches_time.py -eve_path {input.eve_json_path} -aia_path {input.aia_path} -out_path {params.match_outpath} -debug"
-
 
 ## generates train, test, values datasets 
 rule make_train_val_test_sets:
     input:
-        matches="/home/andres_munoz_j/sw-irr-output/matches_eve_aia_171_193_211_304.csv"
+        matches="/home/benoit_tremblay_23/sw-irr-output/matches_eve_aia_171_193_211_304.csv"
     output:
-        train = "/home/andres_munoz_j/sw-irr-output/train.csv",
-        val = "/home/andres_munoz_j/sw-irr-output/val.csv",
-        test = "/home/andres_munoz_j/sw-irr-output/test.csv"
+        train = "/home/benoit_tremblay_23/sw-irr-output/train.csv",
+        val = "/home/benoit_tremblay_23/sw-irr-output/val.csv",
+        test = "/home/benoit_tremblay_23/sw-irr-output/test.csv"
     shell:
         "python canonical_data/fdl18_make_splits.py --src {input.matches} --splits rve"
 
@@ -44,21 +43,21 @@ rule make_train_val_test_sets:
 # Creates the normalization values based on the train set
 rule make_normalize:
     input:
-        matches = "/home/andres_munoz_j/sw-irr-output/matches_eve_aia_171_193_211_304.csv",
+        matches = "/home/benoit_tremblay_23/sw-irr-output/matches_eve_aia_171_193_211_304.csv",
     params:
-        basepath = "/home/andres_munoz_j/sw-irr-output",
+        basepath = "/home/benoit_tremblay_23/sw-irr-output",
         divide = 4
     output:
-        eve_mean= "{params.basepath}/eve_mean.npy",
-        eve_std= "{params.basepath}/eve_std.npy",
-        eve_sqrt_mean= "{params.basepath}/eve_sqrt_mean.npy",
-        eve_sqrt_std= "{params.basepath}/eve_sqrt_std.npy",
-        aia_mean= "{params.basepath}/aia_mean.npy",
-        aia_std= "{params.basepath}/aia_std.npy",
-        aia_sqrt_mean= "{params.basepath}/aia_sqrt_mean.npy",
-        aia_sqrt_std= "{params.basepath}/aia_sqrt_std.npy"
+        eve_mean= "/home/benoit_tremblay_23/sw-irr-output//eve_mean.npy",
+        eve_std= "/home/benoit_tremblay_23/sw-irr-output//eve_std.npy",
+        eve_sqrt_mean= "/home/benoit_tremblay_23/sw-irr-output//eve_sqrt_mean.npy",
+        eve_sqrt_std= "/home/benoit_tremblay_23/sw-irr-output//eve_sqrt_std.npy",
+        aia_mean= "/home/benoit_tremblay_23/sw-irr-output//aia_mean.npy",
+        aia_std= "/home/benoit_tremblay_23/sw-irr-output//aia_std.npy",
+        aia_sqrt_mean= "/home/benoit_tremblay_23/sw-irr-output//aia_sqrt_mean.npy",
+        aia_sqrt_std= "/home/benoit_tremblay_23/sw-irr-output//aia_sqrt_std.npy"
     shell:
-        "python canonical_data/fdl22_make_normalize.py --base {params.basepath} --divide {params.divide}"
+        "python canonical_data/fdl22_make_normalize.py --base /home/benoit_tremblay_23/sw-irr-output/ --divide {params.divide}"
 
 #########################################################################################################
 ##TEST AND TRAIN MODEL
@@ -67,16 +66,16 @@ rule make_normalize:
 ## fits means and stds to linear model
 rule fit_linear_model:
     params:
-        basepath = "/home/andres_munoz_j/sw-irr-output",
+        basepath = "/home//sw-irr-output",
     input:
-        eve_mean= "{params.basepath}/eve_mean.npy",
-        eve_std= "{params.basepath}/eve_std.npy",
-        eve_sqrt_mean= "{params.basepath}/eve_sqrt_mean.npy",
-        eve_sqrt_std= "{params.basepath}/eve_sqrt_std.npy",
-        aia_mean= "{params.basepath}/aia_mean.npy",
-        aia_std= "{params.basepath}/aia_std.npy",
-        aia_sqrt_mean= "{params.basepath}/aia_sqrt_mean.npy",
-        aia_sqrt_std= "{params.basepath}/aia_sqrt_std.npy"
+        eve_mean= "/home/benoit_tremblay_23/sw-irr-output//eve_mean.npy",
+        eve_std= "/home/benoit_tremblay_23/sw-irr-output//eve_std.npy",
+        eve_sqrt_mean= "/home/benoit_tremblay_23/sw-irr-output//eve_sqrt_mean.npy",
+        eve_sqrt_std= "/home/benoit_tremblay_23/sw-irr-output//eve_sqrt_std.npy",
+        aia_mean= "/home/benoit_tremblay_23/sw-irr-output//aia_mean.npy",
+        aia_std= "/home/benoit_tremblay_23/sw-irr-output//aia_std.npy",
+        aia_sqrt_mean= "/home/benoit_tremblay_23/sw-irr-output//aia_sqrt_mean.npy",
+        aia_sqrt_std= "/home/benoit_tremblay_23/sw-irr-output//aia_sqrt_std.npy"
     output:
         means="eve_residual_mean_14ptot.npy",
         stds="eve_residual_std_14ptot.npy"
