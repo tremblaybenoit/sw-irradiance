@@ -1,17 +1,22 @@
 #########################################################################################################
 ##SETUP AND GENERATE TRAINING DATA
 #########################################################################################################
-configfile:"config_residuals/anet_3_bn_15.json"
+configfile: "snakemake-config.yaml"
 
 
 ## finds corresponding eve data given path to aia files
 ## make sure the output path matches your user home folder
 
+# rule all:
+#     input:
+#         errors = "errors.npy"
+
+
 rule create_eve_json:
     input:
-        eve_raw_path= "/home/miraflorista/sw-irradiance/data/EVE/raw/",
+        eve_raw_path=config["eve_base_path"]+"/raw"
     output:
-        eve_json_path= "/home/miraflorista/sw-irradiance/data/EVE/EVE.json"
+        eve_json_path= config["eve_base_path"]+"/EVE.json"
     shell:
         "python canonical_data/fdl22_create_eve_json.py -eve_raw_path {input.eve_raw_path} -json_outpath {output.eve_json_path}"
 
@@ -19,45 +24,24 @@ rule create_eve_json:
 ## generates matches between EVE data and the AIA files
 rule generate_matches_time:
     input:
-        eve_json_path = "/home/miraflorista/sw-irradiance/data/EVE/EVE.json",
+        eve_json_path = config["eve_base_path"]+"/EVE.json",
         aia_path = "/mnt/aia-jsoc"
     params:
-        match_outpath = "/home/benoit_tremblay_23/sw-irr-output"
+        match_outpath = config["sw-irr-output_path"]
     output:
-        matches_output = "/home/benoit_tremblay_23/sw-irr-output/matches_eve_aia_171_193_211_304.csv"
+        matches_output = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv"
     shell:
         "python canonical_data/fdl22_generate_matches_time.py -eve_path {input.eve_json_path} -aia_path {input.aia_path} -out_path {params.match_outpath} -debug"
 
 ## generates train, test, values datasets 
 rule make_train_val_test_sets:
     input:
-        matches="/home/benoit_tremblay_23/sw-irr-output/matches_eve_aia_171_193_211_304.csv"
+        matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv"
     output:
-        train = "/home/benoit_tremblay_23/sw-irr-output/train.csv",
-        val = "/home/benoit_tremblay_23/sw-irr-output/val.csv",
-        test = "/home/benoit_tremblay_23/sw-irr-output/test.csv"
+        expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"])
     shell:
         "python canonical_data/fdl18_make_splits.py --src {input.matches} --splits rve"
-
-
-# Creates the normalization values based on the train set
-rule make_normalize:
-    input:
-        matches = "/home/benoit_tremblay_23/sw-irr-output/matches_eve_aia_171_193_211_304.csv",
-    params:
-        basepath = "/home/benoit_tremblay_23/sw-irr-output",
-        divide = 4
-    output:
-        eve_mean= "/home/benoit_tremblay_23/sw-irr-output//eve_mean.npy",
-        eve_std= "/home/benoit_tremblay_23/sw-irr-output//eve_std.npy",
-        eve_sqrt_mean= "/home/benoit_tremblay_23/sw-irr-output//eve_sqrt_mean.npy",
-        eve_sqrt_std= "/home/benoit_tremblay_23/sw-irr-output//eve_sqrt_std.npy",
-        aia_mean= "/home/benoit_tremblay_23/sw-irr-output//aia_mean.npy",
-        aia_std= "/home/benoit_tremblay_23/sw-irr-output//aia_std.npy",
-        aia_sqrt_mean= "/home/benoit_tremblay_23/sw-irr-output//aia_sqrt_mean.npy",
-        aia_sqrt_std= "/home/benoit_tremblay_23/sw-irr-output//aia_sqrt_std.npy"
-    shell:
-        "python canonical_data/fdl22_make_normalize.py --base /home/benoit_tremblay_23/sw-irr-output/ --divide {params.divide}"
+        
 
 #########################################################################################################
 ##TEST AND TRAIN MODEL
@@ -66,33 +50,59 @@ rule make_normalize:
 ## fits means and stds to linear model
 rule fit_linear_model:
     params:
-        basepath = "/home//sw-irr-output",
+        basepath = config["sw-irr-output_path"]
     input:
-        eve_mean= "/home/benoit_tremblay_23/sw-irr-output//eve_mean.npy",
-        eve_std= "/home/benoit_tremblay_23/sw-irr-output//eve_std.npy",
-        eve_sqrt_mean= "/home/benoit_tremblay_23/sw-irr-output//eve_sqrt_mean.npy",
-        eve_sqrt_std= "/home/benoit_tremblay_23/sw-irr-output//eve_sqrt_std.npy",
-        aia_mean= "/home/benoit_tremblay_23/sw-irr-output//aia_mean.npy",
-        aia_std= "/home/benoit_tremblay_23/sw-irr-output//aia_std.npy",
-        aia_sqrt_mean= "/home/benoit_tremblay_23/sw-irr-output//aia_sqrt_mean.npy",
-        aia_sqrt_std= "/home/benoit_tremblay_23/sw-irr-output//aia_sqrt_std.npy"
+      expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"]),
+      eve_json_path=config["eve_base_path"]+"/EVE.nc"
     output:
-        means="eve_residual_mean_14ptot.npy",
-        stds="eve_residual_std_14ptot.npy"
+        linear_preds =expand(config["sw-irr-output_path"]+"/EVE_linear_pred__{split}.nc",split = config["SPLIT"]),
+        linear_stats =config["sw-irr-output_path"]+"/mean_std_feats.npz"
     shell:
-        "python canonical_code/setup_residual_totirr.py"
+        """
+        python canonical_code/fdl18_setup_residual_totirr.py \
+        --base {params.basepath}
+        """
+
+## Creates the normalization values based on the train set
+rule make_normalize:
+    input:
+        matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv",
+    params:
+        basepath = config["sw-irr-output_path"],
+        divide = 4
+    output:
+        norm_stats=expand(config["sw-irr-output_path"]+"/_{instrument}_{norm_stat}.npy",instrument=config["INSTRUMENT"],norm_stat=config["NORM-STATISTIC"])
+    shell:
+        """
+        python canonical_data/fdl22_make_normalize.py \
+        --base /home/benoit_tremblay_23/sw-irr-output/ \
+        --divide {params.divide}
+        """
+
 
 ## train CNN
 rule train_CNN:
     input:
         means="eve_residual_mean_14ptot.npy",
-        stds="eve_residual_std_14ptot.npy"
+        stds="eve_residual_std_14ptot.npy",
+        norm_stats=expand("{path}/_{instrument}_{norm_stat}.npy",path=config["sw-irr-output_path"],instrument=config["INSTRUMENT"],norm_stat=config["NORM-STATISTIC"]),
+        linear_preds =expand(config["sw-irr-output_path"]+"/EVE_linear_pred__{split}.nc",split = config["SPLIT"]),
+        linear_stats =config["sw-irr-output_path"]+"/mean_std_feats.npz",
     output:
-        trained_loss = "trained_loss.npy",
-        val_loss = "val_loss.npy"
+        model = expand(config["sw-irr-output_path"]+"/EVE_linear_pred__{split}_model.pt",split = config["SPLIT"]),
+        log = expand(config["sw-irr-output_path"]+"/EVE_linear_pred__{split}_log.txt",split = config["SPLIT"]),
+        trained_loss = config["sw-irr-output_path"]+"trained_loss.npy",
+        val_loss = config["sw-irr-output_path"]+"val_loss.npy"
+    params:
+        data_path = config["sw-irr-output_path"],
+        model_results = config["model_results_path"]
     shell:
-        "python cdfg_residual_unified_train_to_tirr.py {input.config_file} {input.means}"
-
+        """
+        python fdl18_cdfg_residual_unified_train_to_tirr.py \
+        --src {wildcards.sw-irr-output_path} \
+        --data_root {params.data_path} \
+        --target {params.model_results} #model results folder
+         """
 
 ## test data
 rule test_CNN:
@@ -101,8 +111,20 @@ rule test_CNN:
         val_loss = "val_loss.npy"
     output:
         errors = "errors.npy"
+    params:
+        phase = config["phase"],
+        model_results = config["model_results_path"],
+        data_path = config["sw-irr-output_path"]
+
     shell:
-        "python cdfg_residual_unified_test_to_tirr.py"
+        """
+        python fdl18_cdfg_residual_unified_test_to_tirr.py  \
+        --src {configfiles} \
+        --models {params.model_results} \
+        --data_root {params.data_path} \
+        --target {pathteest results} \
+        --eve_root {path to eve file?} --phase {params.phase}
+        """
 
 
 
@@ -115,7 +137,7 @@ rule make_inference:
     input:
     output:
     shell:
-        "python make_csv_inference.csv"
+        "python make_csv_inference.py"
 
 ##
 rule unified_inference:
