@@ -12,7 +12,7 @@ import argparse
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 import logging
-import json
+from netCDF4 import Dataset
 import skimage
 
 # Add s4pi module to patch
@@ -49,24 +49,61 @@ def handleStd(index_aia_i):
     X = np.concatenate([X,np.nanstd(AIA_sample,axis=(1,2,3))],axis=0)
     return np.expand_dims(X,axis=0)
 
-def save_prediction(eve_data, prediction, data_root, split, debug=False):
+def save_prediction(eve_data, line_indices, prediction, data_root, split, debug=False):
 
     matches = pd.read_csv(data_root+split+'.csv')
-
     if debug:
         matches = matches.loc[0:4,:]
 
-    y = eve_data[matches['eve_indices'].values,:]
+    # open database
+    netcdfDB = Dataset(data_root + 'EVE_linear_pred_' + split + '.nc', "w", format="NETCDF4")
+    netcdfDB.title = f'{split} EVE observed and predicted spectral irradiance for specific spectral lines using a linear model'
+    netcdfDB.split = split + ' set'
 
+    # Assemble variables
+    eve_date = eve.variables['isoDate'][:][matches['eve_indices'].values]
+    eve_jd = eve.variables['julianDate'][:][matches['eve_indices'].values]
+    eve_logt = eve.variables['logt'][:][line_indices]
+    eve_name = eve.variables['name'][:][line_indices]
+    eve_wl = eve.variables['wavelength'][:][line_indices]
+    eve_irr = eve.variables['irradiance'][:][matches['eve_indices'].values,:][:,line_indices]
 
-    prediction_output= {
-        "dates":matches['eve_dates'].tolist(),
-        "data":y.tolist(),
-        "prediction": prediction.tolist()
-    }
+    # Create dimensions
+    isoDate = netcdfDB.createDimension("isoDate", None)
+    name = netcdfDB.createDimension("name", eve_name.shape[0])
 
-    with open(data_root + 'EVE_linear_pred_' + split + '.json', "w") as outfile:
-        json.dump(prediction_output, outfile)
+    # Create variables and atributes
+    isoDates = netcdfDB.createVariable('isoDate', 'S2', ('isoDate',))
+    isoDates.units = 'string date in ISO format'
+
+    julianDates = netcdfDB.createVariable('julianDate', 'f4', ('isoDate',))
+    julianDates.units = 'days since the beginning of the Julian Period (January 1, 4713 BC)'
+
+    names = netcdfDB.createVariable('name', 'S2', ('name',))
+    names.units = 'strings with the line names'
+
+    wavelength = netcdfDB.createVariable('wavelength', 'f4', ('name',))
+    wavelength.units = 'line wavelength in nm'
+
+    logt = netcdfDB.createVariable('logt', 'f4', ('name',))
+    logt.units = 'log10 of the temperature'
+
+    irradiance = netcdfDB.createVariable('irradiance', 'f4', ('isoDate','name',))
+    irradiance.units = 'spectal irradiance in the specific line (w/m^2)'
+
+    pred_irradiance = netcdfDB.createVariable('pred_irradiance', 'f4', ('isoDate','name',))
+    pred_irradiance.units = 'predicted spectal irradiance using a linear model in the specific line (w/m^2)'
+
+    # Intialize variables
+    isoDates[:] = eve_date
+    julianDates[:] = eve_jd 
+    names[:] = eve_name
+    wavelength[:] = eve_wl
+    logt[:] = eve_logt
+    irradiance[:] = eve_irr 
+
+    netcdfDB.close()
+
 
 
 def getXy(eve_data, data_root, split, debug=True):
@@ -87,7 +124,8 @@ def getXy(eve_data, data_root, split, debug=True):
         fnList.append(row[aia_columns].tolist())
 
     LOG.info('Start process map')
-    Xs = process_map(handleStd, fnList, chunksize=3)
+
+    Xs = process_map(handleStd, fnList, chunksize=5)
 
     X = np.concatenate(Xs,axis=0)
    
@@ -198,16 +236,16 @@ if __name__ == "__main__":
 
     data_root = args.base
 
-    # Load Json file
-    LOG.info('Loading Eve.json')
-    eve = json.load(open(args.base+"/EVE.json"))  #loading dictionary with eve data
+    # Load nc file
+    LOG.info('Loading EVE_irradiance.nc')
+    eve = Dataset(args.base + 'EVE_irradiance.nc', "r", format="NETCDF4")
     
-    eve_data = np.array(eve["data"])
+    eve_data = eve.variables['irradiance'][:]
     line_indices = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,14])
     eve_data = eve_data[:,line_indices]
 
     #get the data
-    debug=False
+    debug=True
 
     XTr, YTr, maskTr = getXy(eve_data, data_root, "train", debug=debug)
     XVa, YVa, maskVa = getXy(eve_data, data_root, "val", debug=debug)
@@ -232,11 +270,11 @@ if __name__ == "__main__":
     diffTr = YTr - YTrp; diffTr[maskTr] = 0
     diffVa = YVa - YVap; diffVa[maskVa] = 0
 
+    save_prediction(eve, line_indices, YTrp, data_root, 'train', debug=debug)
+    save_prediction(eve, line_indices, YVap, data_root, 'val', debug=debug)
+    save_prediction(eve, line_indices, YTep, data_root, 'test', debug=debug)
 
-
-    save_prediction(eve_data, YTrp, data_root, 'train', debug=debug)
-    save_prediction(eve_data, YVap, data_root, 'val', debug=debug)
-    save_prediction(eve_data, YTep, data_root, 'test', debug=debug)
+    eve.close()
 
 
     

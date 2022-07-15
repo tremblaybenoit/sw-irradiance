@@ -4,7 +4,7 @@ import os
 import dateutil.parser as dt
 from tqdm import tqdm
 import glob
-import json
+from netCDF4 import Dataset
 import datetime
 import argparse
 
@@ -29,9 +29,10 @@ def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve
     # List of filenames, per wavelength
     aia_filenames = [[f for f in sorted(glob.glob(aia_path+'/%s/aia%s_*.fits' % (wl, wl)))] for wl in wavelengths]
 
-    eve = json.load(open(eve_path)) #loading dictionary with eve data
-    pbar_convert_dates = tqdm(eve["metadata"]["raw_dates"])
-    eve["metadata"]["iso_dates"] = [dt.isoparse(i) for i in pbar_convert_dates]
+    eve = Dataset(eve_path, "r", format="NETCDF4")
+
+    pbar_convert_dates = tqdm(eve.variables['isoDate'][:])
+    eve_dates = [dt.isoparse(i) for i in pbar_convert_dates]
 
     aia_dates = [[name.split("_")[-1].split('.')[0]+'z' for name in aia_filenames[i]] for i in range(nb_wavelengths)]
 
@@ -51,7 +52,7 @@ def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve
 
     #looping through AIA filenames to find matching EVE files
     for aia_date in pbar_finding_matches:
-        eve_ans = min(eve["metadata"]["iso_dates"], key=lambda sub: abs(sub - aia_date))
+        eve_ans = min(eve_dates, key=lambda sub: abs(sub - aia_date))
         aia_ans = [min(aia_iso_dates[i], key=lambda sub: abs(sub - aia_date)) for i in range(nb_wavelengths)]
         if abs(eve_ans - aia_date) <= threshold_eve and np.amax([abs(aia_ans[i] - aia_date) for i in range(nb_wavelengths)]) <= threshold_aia:
             # print(aia_date, ans_193, ans_211, ans_304)
@@ -61,7 +62,7 @@ def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve
                 aia_res[i]+=[aia_ans[i]]
         pbar_finding_matches.set_description("Processing %s" % aia_date)
 
-    eve_idx = [eve["metadata"]["iso_dates"].index(date) for date in eve_res] #storing indices in EVE json file
+    eve_idx = [eve_dates.index(date) for date in eve_res] #storing indices in EVE json file
     aia_idx = [[(aia_iso_dates[i]).index(date) for date in aia_res[i]] for i in range(nb_wavelengths)]
     aia_selections = [[aia_filenames[j][i] for i in aia_idx[j]] for j in range(nb_wavelengths)]
     
@@ -78,6 +79,8 @@ def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve
     for i in wavelengths:
         filename = filename+'_'+i
     match.to_csv(filename+'.csv', index=False)
+
+    eve.close()
 
 if __name__ == "__main__":
 

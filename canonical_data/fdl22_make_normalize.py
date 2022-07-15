@@ -4,7 +4,7 @@
 import numpy as np
 import argparse
 import pandas as pd
-import json
+from netCDF4 import Dataset
 import sys, os
 import skimage
 from tqdm import tqdm
@@ -49,14 +49,14 @@ if __name__ == "__main__":
     args.base = "%s/" % (args.base)
     divide = args.divide
 
-    # Load Json file
-    LOG.info('Loading Eve.json')
-    eve = json.load(open(args.base+"/EVE.json"))  #loading dictionary with eve data
+    # Load nc file
+    LOG.info('Loading EVE_irradiance.nc')
+    eve = Dataset(args.base + 'EVE_irradiance.nc', "r", format="NETCDF4")
     train = pd.read_csv(args.base+"/train.csv")
     
     
     LOG.info('Calculate mean and std of EVE lines')
-    Y = np.array(eve["data"])
+    Y = eve.variables['irradiance'][:]
     line_indices = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,14])
 
     Y = Y[train['eve_indices'].values,:][:,line_indices]
@@ -65,16 +65,16 @@ if __name__ == "__main__":
     YMean = np.mean(Y,axis=0)
     YStd = np.std(Y,axis=0)
 
-    np.save("%s/eve_mean.npy" % args.base,YMean)
-    np.save("%s/eve_std.npy" % args.base,YStd)    
+    np.save("%s/eve_mean.npy" % args.base, np.ma.filled(YMean, np.nan))
+    np.save("%s/eve_std.npy" % args.base, np.ma.filled(YStd, np.nan))    
 
     #sqrt
     YSqrt = np.sqrt(Y)
     YSqrtMean = np.mean(YSqrt,axis=0)
     YSqrtStd = np.std(YSqrt,axis=0)
 
-    np.save("%s/eve_sqrt_mean.npy" % args.base,YSqrtMean)
-    np.save("%s/eve_sqrt_std.npy" % args.base,YSqrtStd)
+    np.save("%s/eve_sqrt_mean.npy" % args.base, np.ma.filled(YSqrtMean, np.nan))
+    np.save("%s/eve_sqrt_std.npy" % args.base, np.ma.filled(YSqrtStd, np.nan))
 
 
     aia_columns = [col for col in train.columns if 'AIA' in col]
@@ -85,7 +85,7 @@ if __name__ == "__main__":
 
     LOG.info('Processing AIA files')
 
-    AIA_samples = process_map(handleStd, fnList, max_workers=50, chunksize=34)
+    AIA_samples = process_map(handleStd, fnList, chunksize=5)
     AIA_samples = np.concatenate(AIA_samples,axis=1)
     AIA_samples_sqrt = np.sqrt(AIA_samples)
     
@@ -102,5 +102,7 @@ if __name__ == "__main__":
 
     np.save("%s/aia_mean.npy" % args.base,AIA_m)
     np.save("%s/aia_std.npy" % args.base,AIA_s)
+
+    eve.close()
     
 
