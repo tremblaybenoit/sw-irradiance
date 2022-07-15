@@ -3,13 +3,33 @@
 # Take a folder and setup the targets for predicting y-y_{linear}
 #
 
-import sys
+import sys, os
 import numpy as np
 import pandas as pd
 import multiprocessing
 from sklearn.linear_model import SGDRegressor
-import pdb
 import argparse
+from tqdm import tqdm
+from tqdm.contrib.concurrent import process_map
+import logging
+import json
+import skimage
+
+# Add s4pi module to patch
+_S4PI_DIR = os.path.abspath(__file__).split('/')[:-3]
+_S4PI_DIR = os.path.join('/',*_S4PI_DIR)
+sys.path.append(_S4PI_DIR+'/4piuvsun/')
+from s4pi.data.preprocessing import loadAIAMap
+
+
+# Initialize Python Logger
+logging.basicConfig(format='%(levelname)-4s '
+                           '[%(module)s:%(funcName)s:%(lineno)d]'
+                           ' %(message)s')
+
+LOG = logging.getLogger()
+LOG.setLevel(logging.INFO)
+
 
 def getEVEInd(data_root,split):
     xind = [0,1,2,3,4,5,6,7,8,9,10,11,12,14,-1]
@@ -21,44 +41,31 @@ def getEVEInd(data_root,split):
 
 
 def handleStd(index_aia_i):
-    # Factor 4 because new different image resolution (512) than when training (256)
-    AIA_sample = np.asarray( [np.expand_dims(np.load(channel.replace('fits.',''))['x'],axis=0) for channel in index_aia_i], dtype = np.float64 )
-    AIA_sample = np.concatenate(AIA_sample,axis=0)
-    divide=2
-    AIA_down = np.asarray( ( [np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(AIA_sample[i,:,:], (divide, divide)), axis=0) for i in range(AIA_sample.shape[0])]), dtype=np.float64 )
-    AIA_sample = np.concatenate(AIA_down, axis = 0)
-    X = np.mean(AIA_sample,axis=(1,2))
-    X = np.concatenate([X,np.std(AIA_sample,axis=(1,2))],axis=0)
+
+    divide = 4
+
+    AIA_sample = np.asarray([np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(loadAIAMap(aia_file).data, (divide, divide)), axis=0) for aia_file in index_aia_i], dtype = np.float64 )
+    X = np.mean(AIA_sample,axis=(1,2,3))
+    X = np.concatenate([X,np.std(AIA_sample,axis=(1,2,3))],axis=0)
     return np.expand_dims(X,axis=0)
 
 
-def getXy(EVE_path,data_root,split):
-    EVE = np.load(EVE_path)
+def getXy(eve_data, data_root, split):
 
-    EVE = EVE[:,[0,1,2,3,4,5,6,7,8,9,10,11,12,14,-1]]
-
-    df_indices = pd.read_csv(data_root+split+'.csv')
-    index_aia = data_root + np.asarray(df_indices[[channel for channel in df_indices.columns[2:-1]]])
-    index_eve = np.asarray(df_indices[df_indices.columns[-1]]).astype(int)
+    matches = pd.read_csv(data_root+split+'.csv')
+    # index_aia = data_root + np.asarray(matches[[channel for channel in matches.columns[2:-1]]])
+    # index_eve = np.asarray(matches[matches.columns[-1]]).astype(int)
 
     Xs, ys = [], []
 
     fnList = []
-    for i in range(0,len(index_eve)):
-        
-        fns = index_aia[i,:] 
-        fnList.append(fns)
 
-        if i % 100 == 0:
-            print("%s %d/%d" % (split,i,len(index_eve)))
+    aia_columns = [col for col in matches.columns if 'AIA' in col]
+    for index, row in tqdm(matches.iterrows()):
+        fnList.append(row[aia_columns].tolist())
 
-        y = EVE[index_eve[i],:]
-
-        ys.append(np.expand_dims(y,axis=0))
-    
-    P = multiprocessing.Pool(16)
-    Xs = P.map(handleStd,fnList)
-    P.close()
+    LOG.info('Start process map')
+    Xs = process_map(handleStd, fnList, max_workers=3)
 
     X, y = np.concatenate(Xs,axis=0), np.concatenate(ys,axis=0)
    
@@ -124,6 +131,8 @@ def getNormalize(XTr):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--base',dest='base',required=True)
+    parser.add_argument('--divide',dest='divide',default=4,required=True, type=int)
+
     args = parser.parse_args()
     return args
 
@@ -131,12 +140,20 @@ if __name__ == "__main__":
     args = parse_args()
 
     data_root = args.base
-    EVE_path = "%s/irradiance_30mn_14ptot.npy" % data_root
+
+    # Load Json file
+    LOG.info('Loading Eve.json')
+    eve = json.load(open(args.base+"/EVE.json"))  #loading dictionary with eve data
+    
+    eve_data = np.array(eve["data"])
+    line_indices = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,14])
+    eve_data = eve_data[:,line_indices]
 
     #get the data
-    XTe, ___, ______ = getXy(EVE_path, data_root, "test")
-    XTr, yTr, maskTr = getXy(EVE_path, data_root, "train")
-    XVa, yVa, maskVa = getXy(EVE_path, data_root, "val")
+    
+    XTr, yTr, maskTr = getXy(eve_data, data_root, "train")
+    XVa, yVa, maskVa = getXy(eve_data, data_root, "val")
+    XTe, ___, ______ = getXy(eve_data, data_root, "test")
 
     np.savez_compressed("%s/mean_std_feats.npz" % data_root,XTr=XTr,XVa=XVa,XTe=XTe)
 

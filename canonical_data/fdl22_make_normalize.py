@@ -8,10 +8,11 @@ import json
 import sys, os
 import skimage
 from tqdm import tqdm
+from tqdm.contrib.concurrent import process_map
 import logging
 
 
-# Add modile to patch
+# Add s4pi module to patch
 _S4PI_DIR = os.path.abspath(__file__).split('/')[:-3]
 _S4PI_DIR = os.path.join('/',*_S4PI_DIR)
 sys.path.append(_S4PI_DIR+'/4piuvsun/')
@@ -33,6 +34,12 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+def handleStd(index_aia_i):
+
+    divide = 4
+    AIA_sample = np.asarray([np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(loadAIAMap(aia_file).data, (divide, divide)), axis=0) for aia_file in index_aia_i], dtype = np.float64 )
+    
+    return AIA_sample
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -72,29 +79,26 @@ if __name__ == "__main__":
 
     aia_columns = [col for col in train.columns if 'AIA' in col]
 
-    AIA_samples = []
-    AIA_samples_sqrt = []
+    fnList = []
+    for index, row in tqdm(train.iterrows()):
+        fnList.append(row[aia_columns].tolist())
 
     LOG.info('Processing AIA files')
-    for index, row in tqdm(train.iterrows()):
-        X = np.asarray( [np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(loadAIAMap(row[channel]).data, (divide, divide)), axis=0) for channel in aia_columns], dtype = np.float64 )
-        Xsqrt = np.sqrt(X)
-        AIA_samples_sqrt.append(Xsqrt)
-        AIA_samples.append(X)
 
+    AIA_samples = process_map(handleStd, fnList, max_workers=3)
+    AIA_samples = np.concatenate(AIA_samples,axis=1)
+    AIA_samples_sqrt = np.sqrt(AIA_samples)
     
     LOG.info('Calculating mean and std for AIA files')
 
-    AIA_samples_sqrt = np.concatenate(AIA_samples_sqrt,axis=1)
-    AIA_m_sqrt = np.mean(AIA_samples_sqrt,axis=(1,2,3))
-    AIA_s_sqrt = np.std(AIA_samples_sqrt,axis=(1,2,3))
+    AIA_m_sqrt = np.nanmean(AIA_samples_sqrt,axis=(1,2,3))
+    AIA_s_sqrt = np.nanstd(AIA_samples_sqrt,axis=(1,2,3))
 
     np.save("%s/aia_sqrt_mean.npy" % args.base,AIA_m_sqrt)
     np.save("%s/aia_sqrt_std.npy" % args.base,AIA_s_sqrt)
-    
-    AIA_samples = np.concatenate(AIA_samples,axis=1)
-    AIA_m = np.mean(AIA_samples,axis=(1,2,3))
-    AIA_s = np.std(AIA_samples,axis=(1,2,3))
+
+    AIA_m = np.nanmean(AIA_samples,axis=(1,2,3))
+    AIA_s = np.nanstd(AIA_samples,axis=(1,2,3))
 
     np.save("%s/aia_mean.npy" % args.base,AIA_m)
     np.save("%s/aia_std.npy" % args.base,AIA_s)
