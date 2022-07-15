@@ -20,7 +20,7 @@ import torchvision
 from torchvision import models,transforms
 import numpy as np
 import time
-import sys
+import asyncio
 import copy
 import argparse
 import json
@@ -67,8 +67,8 @@ def train_model(model, dataloaders, device, criterion, optimizer, scheduler, num
             for batchI,(inputs, labels) in enumerate(dataloaders[phase]):
                 ### needs to be switched to device 0 for DataParallel to work, not sure why they did it this way.
                 with torch.cuda.device(0):
-                    inputs = inputs.cuda(async = True)
-                    labels = labels.cuda(async = True)
+                    inputs = inputs.cuda(non_blocking=True)
+                    labels = labels.cuda(non_blocking=True)
 
 
                     ### zero the param gradients
@@ -140,11 +140,16 @@ def parse_args():
     parser.add_argument('--src',dest='src',required=True)
     parser.add_argument('--target',dest='target',required=True)
     parser.add_argument('--data_root',dest='data_root',required=True)
+    parser.add_argument('--nb_channels',dest='nb_channels', default=4, type=int,
+                        help='Number of SDO/AIA channels used.')
     args = parser.parse_args()
     return args
 
 if __name__ == "__main__":
     args = parse_args() 
+
+    # Number of channels for SDO/AIA
+    nb_channels = args.nb_channels
 
     #handle setup
     if not os.path.exists(args.target):
@@ -182,7 +187,7 @@ if __name__ == "__main__":
             sw_net = models.resnet18(pretrained = False)
             num_ftrs = sw_net.fc.in_features
             sw_net.avgpool = nn.AdaptiveAvgPool2d((1,1))
-            sw_net.conv1 = nn.Conv2d(9, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+            sw_net.conv1 = nn.Conv2d(nb_channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
             if cfg['dropout']:
                 sw_net.fc = nn.Sequential(
                     nn.Dropout(0.5),
@@ -194,7 +199,7 @@ if __name__ == "__main__":
         elif cfg['arch'] == "drn_d_22":
             sw_net = drn_d_22(pretrained = False)
             num_ftrs = sw_net.fc.in_channels
-            sw_net.layer0[0] = nn.Conv2d(9, 16, kernel_size=(7, 7), stride=(1, 1), padding=(3, 3), bias=False)
+            sw_net.layer0[0] = nn.Conv2d(nb_channels, 16, kernel_size=(7, 7), stride=(1, 1), padding=(3, 3), bias=False)
             if cfg['dropout']:
                 sw_net.fc = nn.Sequential(
                     nn.Dropout(0.5),
@@ -204,13 +209,13 @@ if __name__ == "__main__":
                 sw_net.fc = nn.Conv2d(num_ftrs, 15, kernel_size=(1, 1), stride=(1, 1))  
                 
         elif cfg['arch'] == "avg_mlp":
-            sw_net = alt_models.AvgMLP(9,1024,15, cfg['dropout'])
+            sw_net = alt_models.AvgMLP(nb_channels,1024,15, cfg['dropout'])
         elif cfg['arch'] == 'augresnet':
             sw_net = alt_models.AugResnet2(models.resnet18(pretrained=False), 15, cfg['dropout'])
         elif cfg['arch'] == 'augCNN':
             sw_net = alt_models.AugmentedCNN()
         elif cfg['arch'] == 'avgLinear':
-            sw_net = alt_models.AvgLinearMap(9,15)
+            sw_net = alt_models.AvgLinearMap(nb_channels,15)
 
         elif cfg['arch'].startswith("anet64bn"):
             layerCount = int(cfg['arch'].split("_")[1])
@@ -243,10 +248,14 @@ if __name__ == "__main__":
             criterion = nn.SmoothL1Loss()
 
 
+        # Benito: 
+        # Data_path = '../andres_munoz_j/sw-irr-output/'
         ### Some inputs
         data_root = args.data_root
 
+        # Benito: Path to residuals for both train/val
         EVE_path = "%s/irradiance_30mn_residual_14ptot.npy" % data_root
+        # Benito: We saved everything in 3 separate files (training, val, test).
 
         csv_dir = data_root
         crop = cfg['crop']
@@ -267,6 +276,9 @@ if __name__ == "__main__":
             aia_transform = transforms.Compose([transforms.Normalize(tuple(aia_mean),tuple(aia_std))])
             
         ### Dataset & Dataloader for train and validation
+        # Benito: I modified SW_Dataset
+        # SW_Dataset (self, EVE_path, AIA_root, index_file, resolution, EVE_scale, EVE_sigmoid, split = 'train', AIA_transform = None, flip = False, crop = False, crop_res = None, zscore = True, self_mean_normalize=False):
+
         sw_datasets = {x: SW_Dataset(EVE_path, data_root, csv_dir, resolution, cfg['eve_transform'], cfg['eve_sigmoid'], split = x, AIA_transform = aia_transform, flip=flip, crop = crop, crop_res = crop_res, zscore = zscore,self_mean_normalize=True) for x in ['train', 'val']}
 
         sw_dataloaders = {x: torch.utils.data.DataLoader(sw_datasets[x], batch_size = batch_size, shuffle = True, num_workers=8) for x in ['train', 'val']}

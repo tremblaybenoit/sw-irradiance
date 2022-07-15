@@ -1,0 +1,8 @@
+
+eve_base_path: "/home/miraflorista/sw-irradiance/data/EVE"
+sw-irr-output_path: "/home/miraflorista/sw-irr-output"
+model_results_path: "home/miraflorista/model_results"
+INSTRUMENT: ["aia","eve"]
+NORM-STATISTIC: ["mean","sqrt_mean","std","sqrt_std"]
+SPLIT: ["train","test","val"]
+phase: ["test"]
