@@ -9,10 +9,26 @@ import numpy as np
 import torch
 import pandas as pd
 from torch.utils.data import Dataset
-import sys
+import os, sys
 import math
 import pdb
+import json
 import skimage.transform
+import logging
+
+# Add s4pi module to patch
+_S4PI_DIR = os.path.abspath(__file__).split('/')[:-3]
+_S4PI_DIR = os.path.join('/',*_S4PI_DIR)
+sys.path.append(_S4PI_DIR+'/../4piuvsun/')
+from s4pi.data.preprocessing import loadAIAMap
+
+# Initialize Python Logger
+logging.basicConfig(format='%(levelname)-4s '
+                           '[%(module)s:%(funcName)s:%(lineno)d]'
+                           ' %(message)s')
+
+LOG = logging.getLogger()
+LOG.setLevel(logging.INFO)
 
 def aia_scale(aia_sample, zscore = True, self_mean_normalize=False):
     if not self_mean_normalize:
@@ -73,6 +89,17 @@ class SW_Dataset(Dataset):
 
     def __init__(self, EVE_path, AIA_root, index_file, resolution, EVE_scale, EVE_sigmoid, split = 'train', AIA_transform = None, flip = False, crop = False, crop_res = None, zscore = True, self_mean_normalize=False):
 
+        """_summary_
+
+        Args:
+            EVE_path: Path to eve_mean.npy, etc.
+            AIA_root: Path to aia_mean.npy, etc.
+            index_file: Path to train.csv, etc.
+
+        Returns:
+            : 
+        """
+        
         ''' Input path for aia and eve index files, as well as data path for EVE.
             We load EVE during init, but load AIA images on the fly'''
 
@@ -83,6 +110,7 @@ class SW_Dataset(Dataset):
         self.flip = flip
         
         ### load indices from csv file for the given split
+        # Benito: index_file is a path
         df_indices = pd.read_csv(index_file+split+'.csv')
         
         ### resolution. normal is 224, if 256 we perform crops
@@ -93,7 +121,7 @@ class SW_Dataset(Dataset):
         self.self_mean_normalize = self_mean_normalize
         
         ### all AIA channels. first two columns are junk
-
+        # Benito: Is that the case for us?
         self.index_aia = AIA_root + np.asarray(df_indices[[channel for channel in df_indices.columns[2:-1]]])
 
         ### last column is EVE index
@@ -118,8 +146,21 @@ class SW_Dataset(Dataset):
             self.EVE_stds = np.load(index_file + 'eve_std.npy')
             
         ### need to get rid of the line 13 because no measurements !
-        full_EVE = np.load(EVE_path)[:,[0,1,2,3,4,5,6,7,8,9,10,11,12,14,-1]]    
+        # full_EVE = np.load(EVE_path)[:,[0,1,2,3,4,5,6,7,8,9,10,11,12,14,-1]]  
+        # full_EVE = np.load(EVE_path)[:,[0,1,2,3,4,5,6,7,8,9,10,11,12,14]]    
+        # self.EVE = full_EVE[self.index_eve,:]
+        # matches = pd.read_csv(data_root+split+'.csv')
+        # Load Json file
+        # Benito: Modified version. Using hardcoded paths, but will be replaced
+        LOG.info('Loading Eve.json')
+        eve = json.load(open("/home/miraflorista/sw-irradiance/data/EVE/EVE.json"))  #loading dictionary with eve data
+        eve_data = np.array(eve["data"])
+        matches = pd.read_csv(data_root+split+'.csv')
+        full_EVE = eve_data[matches['eve_indices'].values, [0,1,2,3,4,5,6,7,8,9,10,11,12,14]]
         self.EVE = full_EVE[self.index_eve,:]
+        # Benito: Load residuals here? We didn't save the way they did.
+        # EVE_linear_pred_train.json
+        # EVE_linear_pred_val.json 
 
         ### AIA transform : means and stds of sqrt(AIA)
         self.AIA_transform = AIA_transform
@@ -145,11 +186,14 @@ class SW_Dataset(Dataset):
     def __getitem__(self, index):
         ### Training in paper is 256 but now data is 512 so we downsample.
 
-#        AIA_sample = np.asarray( [np.load(channel.replace('fits.',''))['x'] for channel in self.index_aia[index, :]], dtype = np.float32 ) 
-        AIA_sample = np.asarray( [np.expand_dims(np.load(channel.replace('fits.',''))['x'],axis=0) for channel in self.index_aia[index, :]], dtype = np.float32 )
-        AIA_sample = np.concatenate(AIA_sample,axis=0)
-        divide=2
-        AIA_down = np.asarray( ( [np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(AIA_sample[i,:,:], (divide, divide)), axis=0) for i in range(AIA_sample.shape[0])]), dtype=np.float32 )
+        # Benito: Replace these steps
+        #        AIA_sample = np.asarray( [np.load(channel.replace('fits.',''))['x'] for channel in self.index_aia[index, :]], dtype = np.float32 ) 
+        divide = 4
+        AIA_down = np.asarray([np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(loadAIAMap(index).data, (divide, divide)), axis=0) for aia_file in index], dtype = np.float64 )
+        # AIA_sample = np.asarray( [np.expand_dims(np.load(channel.replace('fits.',''))['x'],axis=0) for channel in self.index_aia[index, :]], dtype = np.float32 )
+        # AIA_sample = np.concatenate(AIA_sample,axis=0)
+        # divide=2
+        # AIA_down = np.asarray( ( [np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(AIA_sample[i,:,:], (divide, divide)), axis=0) for i in range(AIA_sample.shape[0])]), dtype=np.float32 )
         AIA_sample = np.concatenate(AIA_down, axis = 0)
  
         if self.self_mean_normalize:
