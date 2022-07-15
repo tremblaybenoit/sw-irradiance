@@ -27,7 +27,7 @@ def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve
     nb_wavelengths = len(wavelengths)
 
     # List of filenames, per wavelength
-    aia_filenames = [[os.path.basename(f) for f in sorted(glob.glob(aia_path+'/%s/aia%s_*.fits' % (wl, wl)))] for wl in wavelengths]
+    aia_filenames = [[f for f in sorted(glob.glob(aia_path+'/%s/aia%s_*.fits' % (wl, wl)))] for wl in wavelengths]
 
     eve = json.load(open(eve_path)) #loading dictionary with eve data
     pbar_convert_dates = tqdm(eve["metadata"]["raw_dates"])
