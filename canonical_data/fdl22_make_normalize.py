@@ -85,7 +85,7 @@ if __name__ == "__main__":
 
     LOG.info('Processing AIA files')
 
-    AIA_samples = process_map(handleStd, fnList, max_workers=3)
+    AIA_samples = process_map(handleStd, fnList, max_workers=50, chunksize=34)
     AIA_samples = np.concatenate(AIA_samples,axis=1)
     AIA_samples_sqrt = np.sqrt(AIA_samples)
     

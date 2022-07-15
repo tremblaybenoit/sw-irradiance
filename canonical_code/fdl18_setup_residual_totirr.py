@@ -49,25 +49,47 @@ def handleStd(index_aia_i):
     X = np.concatenate([X,np.std(AIA_sample,axis=(1,2,3))],axis=0)
     return np.expand_dims(X,axis=0)
 
-
-def getXy(eve_data, data_root, split):
+def save_prediction(eve_data, prediction, data_root, split, debug=False):
 
     matches = pd.read_csv(data_root+split+'.csv')
-    # index_aia = data_root + np.asarray(matches[[channel for channel in matches.columns[2:-1]]])
-    # index_eve = np.asarray(matches[matches.columns[-1]]).astype(int)
 
-    Xs, ys = [], []
+    if debug:
+        matches = matches.loc[0:4,:]
 
+    y = eve_data[matches['eve_indices'].values,:]
+
+
+    prediction_output= {
+        "dates":matches['eve_dates'].tolist(),
+        "data":y.tolist(),
+        "prediction": prediction.tolist()
+    }
+
+    with open(data_root + 'EVE_linear_pred_' + split + '.json', "w") as outfile:
+        json.dump(prediction_output, outfile)
+
+
+def getXy(eve_data, data_root, split, debug=False):
+
+    matches = pd.read_csv(data_root+split+'.csv')
+
+    if debug:
+        matches = matches.loc[0:4,:]
+
+    y = eve_data[matches['eve_indices'].values,:]
+
+    Xs = []
     fnList = []
 
     aia_columns = [col for col in matches.columns if 'AIA' in col]
+    
     for index, row in tqdm(matches.iterrows()):
         fnList.append(row[aia_columns].tolist())
 
     LOG.info('Start process map')
-    Xs = process_map(handleStd, fnList, max_workers=3)
+    Xs = process_map(handleStd, fnList, max_workers=50, chunksize=21)
 
-    X, y = np.concatenate(Xs,axis=0), np.concatenate(ys,axis=0)
+    X = np.concatenate(Xs,axis=0)
    
     mask = y < 0
     y[mask] = 0
@@ -173,28 +195,34 @@ if __name__ == "__main__":
     #these are the new targets
     diffTr = yTr - yTrp; diffTr[maskTr] = 0
     diffVa = yVa - yVap; diffVa[maskVa] = 0
+
+    save_prediction(eve_data, yTrp, data_root, 'train', debug=False)
+    save_prediction(eve_data, yVap, data_root, 'val', debug=False)
+    save_prediction(eve_data, yTep, data_root, 'test', debug=False)
+
+
     
-    #update EVE
-    EVE = np.load(EVE_path)
-    updates = [("train",diffTr),("val",diffVa)]
-    for phaseName,newVals in updates:
-        yind, xind = getEVEInd(data_root, phaseName)
-        for yii,yi in enumerate(yind):
-            EVE[yi,xind] = newVals[yii,:]
+    # #update EVE
+    # EVE = np.load(EVE_path)
+    # updates = [("train",diffTr),("val",diffVa)]
+    # for phaseName,newVals in updates:
+    #     yind, xind = getEVEInd(data_root, phaseName)
+    #     for yii,yi in enumerate(yind):
+    #         EVE[yi,xind] = newVals[yii,:]
 
 
-    #new statistics
-    residualMean = np.mean(diffTr,axis=0)   
-    residualStd = np.std(diffTr,axis=0)   
+    # #new statistics
+    # residualMean = np.mean(diffTr,axis=0)   
+    # residualStd = np.std(diffTr,axis=0)   
  
-    np.save("%s/eve_residual_mean_14ptot.npy" % data_root, residualMean)
-    np.save("%s/eve_residual_std_14ptot.npy" % data_root, residualStd)
+    # np.save("%s/eve_residual_mean_14ptot.npy" % data_root, residualMean)
+    # np.save("%s/eve_residual_std_14ptot.npy" % data_root, residualStd)
 
-    #rescale targets
-    EVE *= 100
+    # #rescale targets
+    # EVE *= 100
 
-    #Save the new target and the model
-    np.save("%s/irradiance_30mn_residual_14ptot.npy" % data_root, EVE)
-    np.savez_compressed("%s/residual_initial_model.npz" % data_root,model=model,mu=mu,sig=sig)
+    # #Save the new target and the model
+    # np.save("%s/irradiance_30mn_residual_14ptot.npy" % data_root, EVE)
+    # np.savez_compressed("%s/residual_initial_model.npz" % data_root,model=model,mu=mu,sig=sig)
 
     
