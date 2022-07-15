@@ -72,13 +72,26 @@ def getEVEInd(data_root,split):
 
 # Benito: We need to modify this function
 def getXy(EVE_path,data_root,split):
-    EVE = np.load(EVE_path)
+    # ################ From here
+    # EVE = np.load(EVE_path)
 
-    EVE = EVE[:,[0,1,2,3,4,5,6,7,8,9,10,11,12,14,-1]]
+    # EVE = EVE[:,[0,1,2,3,4,5,6,7,8,9,10,11,12,14,-1]]
 
-    df_indices = pd.read_csv(data_root+split+'.csv')
-    index_aia = data_root + np.asarray(df_indices[[channel for channel in df_indices.columns[2:-1]]])
-    index_eve = np.asarray(df_indices[df_indices.columns[-1]]).astype(int)
+    # df_indices = pd.read_csv(data_root+split+'.csv')
+    # index_aia = data_root + np.asarray(df_indices[[channel for channel in df_indices.columns[2:-1]]])
+    # index_eve = np.asarray(df_indices[df_indices.columns[-1]]).astype(int)
+    # ################ To here
+
+    # eve = json.load(open(EVE_path)) #loading dictionary with eve data
+    
+    # pd.read_csv("")
+
+    # matches_idx =
+    
+    # eve_matched = eve["data"][:,matches_idx]
+
+    df = pd.read_csv('.csv')
+    
 
     Xs, ys = [], []
 
@@ -221,28 +234,6 @@ if __name__ == "__main__":
     np.save("%s/irradiance_30mn_residual_14ptot.npy" % data_root, EVE)
     np.savez_compressed("%s/residual_initial_model.npz" % data_root,model=model,mu=mu,sig=sig)
 
-'''
-# Main
-if __name__ == '__main__':
-    
-    # Generate training, validation and test sets.
-    a = 1
-
-    # Path to data:
-    aia_path = '/mnt/miniset/aia'
-
-    # List of filenames, per wavelength
-    aia_filenames = [[f for f in glob.glob(aia_path+'/aia_lev1_%sa_*.fits' % (wl))] for
-                    wl in ['171', '193', '211', '304']]
-    
-    # Load Pandas or CSV file
-
-    # Steps
-    aia_index = [aia_filenames[0][0], aia_filenames[1][0], aia_filenames[2][0], aia_filenames[3][0]]
-
-    d = int(1024/256)
-    aia_data, aia_mean = handleStd(aia_index, divide=d, remove_off_limb=False)
-'''
 
 
 
