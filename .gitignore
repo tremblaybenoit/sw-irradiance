@@ -1,5 +1,6 @@
-.snakemake/log/*.log
+.snakemake/
 *.json
 *.pdf
 *.gif
 data/EVE/raw/*.npy
+*.csv
