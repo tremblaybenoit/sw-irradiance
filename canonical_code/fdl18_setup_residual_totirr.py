@@ -87,7 +87,7 @@ def getXy(eve_data, data_root, split, debug=True):
         fnList.append(row[aia_columns].tolist())
 
     LOG.info('Start process map')
-    Xs = process_map(handleStd, fnList, max_workers=50, chunksize=3)
+    Xs = process_map(handleStd, fnList, chunksize=3)
 
     X = np.concatenate(Xs,axis=0)
    
@@ -107,7 +107,7 @@ def getResid(y,yp,mask,flare=None,flarePct=0.975):
 
 def fitSGDR_Huber(X,Y,maxIter=10,epsFrac=1.0,logalpha=-4):
 
-    # Remove NaNs
+    # Remove non-finite points
     finite_mask = np.sum(np.isfinite(Y),axis=1)==14
     X = X[finite_mask,:]
     Y = Y[finite_mask,:]
@@ -131,29 +131,54 @@ def applySGDmodel(X,models):
         yp.append(np.expand_dims(models[j].predict(X),axis=1))
     return np.concatenate(yp,axis=1)
 
-def cvSGDH(XTr,yTr,XVa,yVa,maskVa):
+def cvSGDH(XTr,YTr,XVa,YVa,maskVa):
+
+    # Remove non-finite points
+    finite_mask = np.sum(np.isfinite(YTr),axis=1)==14
+    XTr = XTr[finite_mask,:]
+    YTr = YTr[finite_mask,:]
+
+    finite_mask = np.sum(np.isfinite(XTr),axis=1)==9
+    YTr = YTr[finite_mask,:]
+    XTr = XTr[finite_mask,:]
+
+
+    finite_mask = np.sum(np.isfinite(YVa),axis=1)==14
+    XVa = XVa[finite_mask,:]
+    YVa = YVa[finite_mask,:]
+
+    finite_mask = np.sum(np.isfinite(XVa),axis=1)==9
+    YVa = YVa[finite_mask,:]
+    XVa = XVa[finite_mask,:]
+
+
     bestPerformance, bestP, bestA = np.inf, 1, 0
     print("CV'ing huber epsilon, regularization")
     for p in range(1,10,1):
         for a in range(-5,1):
-            model = fitSGDR_Huber(XTr,yTr,maxIter=10,epsFrac=1.0/p,logalpha=a)
+            model = fitSGDR_Huber(XTr,YTr,maxIter=10,epsFrac=1.0/p,logalpha=a)
             
-            yTrp = applySGDmodel(XTr,model)
-            yVap = applySGDmodel(XVa,model)
-            residVa = getResid(yVa,yVap,maskVa)
+            YTrp = applySGDmodel(XTr,model)
+            YVap = applySGDmodel(XVa,model)
+            residVa = getResid(YVa,YVap,maskVa)
             perf = np.mean(residVa)
             print("a = 10e%d, eps = %f => %f" % (a, 1.0 / p, perf))
             if perf < bestPerformance:
                 bestPerformance, bestP, bestA = perf, p, a
 
     print("Best a = 10e%d, eps = %f" % (bestA,1.0/bestP))
-    model = fitSGDR_Huber(XTr,yTr,maxIter=100,epsFrac=1.0/bestP,logalpha=bestA)
-    yTrp = applySGDmodel(XTr,model)
-    yVap = applySGDmodel(XVa,model)
+    model = fitSGDR_Huber(XTr,YTr,maxIter=100,epsFrac=1.0/bestP,logalpha=bestA)
+    YTrp = applySGDmodel(XTr,model)
+    YVap = applySGDmodel(XVa,model)
     W = np.concatenate([np.expand_dims(m.coef_,axis=0) for m in model],axis=0)
     return W
 
 def getNormalize(XTr):
+
+    # Remove non-finite elements
+    finite_mask = np.sum(np.isfinite(XTr),axis=1)==8
+    XTr = XTr[finite_mask,:]
+
     mu = np.nanmean(XTr,axis=0)
     sig = np.nanstd(XTr,axis=0)
     sig[sig==0] = 1e-8
@@ -184,8 +209,8 @@ if __name__ == "__main__":
     #get the data
     debug=False
 
-    XTr, yTr, maskTr = getXy(eve_data, data_root, "train", debug=debug)
-    XVa, yVa, maskVa = getXy(eve_data, data_root, "val", debug=debug)
+    XTr, YTr, maskTr = getXy(eve_data, data_root, "train", debug=debug)
+    XVa, YVa, maskVa = getXy(eve_data, data_root, "val", debug=debug)
     XTe, ___, ______ = getXy(eve_data, data_root, "test", debug=debug)
 
     np.savez_compressed("%s/mean_std_feats.npz" % data_root,XTr=XTr,XVa=XVa,XTe=XTe)
@@ -196,22 +221,22 @@ if __name__ == "__main__":
     XVa = addOne((XVa-mu) / sig)
     XTe = addOne((XTe-mu) / sig)
 
-    model = cvSGDH(XTr,yTr,XVa,yVa,maskVa)
+    model = cvSGDH(XTr,YTr,XVa,YVa,maskVa)
 
     #Predictions = X*W'
-    yTrp = np.dot(XTr,model.T)
-    yVap = np.dot(XVa,model.T) 
-    yTep = np.dot(XTe,model.T)
+    YTrp = np.dot(XTr,model.T)
+    YVap = np.dot(XVa,model.T) 
+    YTep = np.dot(XTe,model.T)
 
     #these are the new targets
-    diffTr = yTr - yTrp; diffTr[maskTr] = 0
-    diffVa = yVa - yVap; diffVa[maskVa] = 0
+    diffTr = YTr - YTrp; diffTr[maskTr] = 0
+    diffVa = YVa - YVap; diffVa[maskVa] = 0
 
 
 
-    save_prediction(eve_data, yTrp, data_root, 'train', debug=debug)
-    save_prediction(eve_data, yVap, data_root, 'val', debug=debug)
-    save_prediction(eve_data, yTep, data_root, 'test', debug=debug)
+    save_prediction(eve_data, YTrp, data_root, 'train', debug=debug)
+    save_prediction(eve_data, YVap, data_root, 'val', debug=debug)
+    save_prediction(eve_data, YTep, data_root, 'test', debug=debug)
 
 
     
