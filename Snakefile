@@ -35,7 +35,7 @@ rule make_train_val_test_sets:
     output:
         expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"])
     shell:
-        "python canonical_data/fdl18_make_splits.py --src {input.matches} --splits rve"
+        "python canonical_data/fdl18_make_train_val_test_sets.py --src {input.matches} --splits rve"
         
 
 #########################################################################################################
@@ -54,12 +54,12 @@ rule fit_linear_model:
         linear_stats =config["sw-irr-output_path"]+"/mean_std_feats.npz"
     shell:
         """
-        python canonical_code/fdl18_setup_residual_totirr.py \
+        python canonical_code/fdl18_fit_linear_model.py \
         --base {params.basepath}
         """
 
 ## Creates the normalization values based on the train set
-rule make_normalize:
+rule calculate_training_normalization:
     input:
         matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv",
     params:
@@ -69,11 +69,10 @@ rule make_normalize:
         norm_stats=expand(config["sw-irr-output_path"]+"/_{instrument}_{norm_stat}.npy",instrument=config["INSTRUMENT"],norm_stat=config["NORM-STATISTIC"])
     shell:
         """
-        python canonical_data/fdl22_make_normalize.py \
-        --base /home/benoit_tremblay_23/sw-irr-output/ \
+        python canonical_data/fdl22_calculate_training_normalization.py \
+        --base {params.basepath} \
         --divide {params.divide}
         """
-
 
 ## train CNN
 rule train_CNN:
