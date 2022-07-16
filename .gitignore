@@ -4,3 +4,4 @@
 *.gif
 data/EVE/raw/*.npy
 *.csv
+*.pyc
