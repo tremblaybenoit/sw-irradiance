@@ -13,7 +13,7 @@ rule create_eve_netcdf:
     output:
         eve_netcdf_path= config["sw-irr-output_path"]+"/EVE_irradiance.nc"
     shell:
-        "python feuvai/data/preprocess/create_eve_netcdf.py -eve_raw_path {input.eve_raw_path} -netcdf_outpath {output.eve_netcdf_path}"
+        "python fdleuvai/data/preprocess/create_eve_netcdf.py -eve_raw_path {input.eve_raw_path} -netcdf_outpath {output.eve_netcdf_path}"
 
 
 ## generates matches between EVE data and the AIA files
@@ -26,7 +26,7 @@ rule generate_matches_time:
     output:
         matches_output = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv"
     shell:
-        "python feuvai/data/preprocess/generate_matches_time.py -eve_path {input.eve_netcdf_path} -aia_path {input.aia_path} -out_path {params.match_outpath}"
+        "python fdleuvai/data/preprocess/generate_matches_time.py -eve_path {input.eve_netcdf_path} -aia_path {input.aia_path} -out_path {params.match_outpath}"
 
 ## generates train, test, values datasets 
 rule make_train_val_test_sets:
@@ -35,7 +35,7 @@ rule make_train_val_test_sets:
     output:
         expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"])
     shell:
-        "python feuvai/data/preprocess/make_train_val_test_sets.py --src {input.matches} --splits rve"
+        "python fdleuvai/data/preprocess/make_train_val_test_sets.py --src {input.matches} --splits rve"
         
 
 #########################################################################################################
@@ -71,7 +71,7 @@ rule calculate_training_normalization:
         norm_stats=expand(config["sw-irr-output_path"]+"/_{instrument}_{norm_stat}.npy",instrument=config["INSTRUMENT"],norm_stat=config["NORM-STATISTIC"])
     shell:
         """
-        python feuvai/data/preprocess/calculate_training_normalization.py \
+        python fdleuvai/data/preprocess/calculate_training_normalization.py \
         --base {params.basepath} \
         --divide {params.divide}
         """
