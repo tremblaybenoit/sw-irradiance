@@ -88,11 +88,12 @@ if __name__ == "__main__":
     AIA_samples = process_map(handleStd, fnList, chunksize=5)
     AIA_samples = np.concatenate(AIA_samples,axis=1)
     
-    LOG.info('Clean problematic files and remove them from the training csv')
+
     total_finite = np.sum(np.isfinite(AIA_samples), axis=(0,2,3))
     valid_entries = total_finite == np.max(total_finite)
 
     if np.sum(valid_entries) < train.shape[0]:
+        LOG.info('Clean problematic files and remove them from the training csv')
         train = train.loc[valid_entries,:].reset_index(drop=True)
         train.to_csv(args.base+"/train.csv", index=False)
         AIA_samples = AIA_samples[:, valid_entries, : , :]
@@ -102,11 +103,17 @@ if __name__ == "__main__":
     AIA_m_sqrt = np.nanmean(AIA_samples_sqrt,axis=(1,2,3))
     AIA_s_sqrt = np.nanstd(AIA_samples_sqrt,axis=(1,2,3))
 
+    LOG.info('AIA_m_sqrt:', AIA_m_sqrt)
+    LOG.info('AIA_s_sqrt:', AIA_s_sqrt)
+
     np.save("%s/aia_sqrt_mean.npy" % args.base,AIA_m_sqrt)
     np.save("%s/aia_sqrt_std.npy" % args.base,AIA_s_sqrt)
 
     AIA_m = np.nanmean(AIA_samples,axis=(1,2,3))
     AIA_s = np.nanstd(AIA_samples,axis=(1,2,3))
+
+    LOG.info('AIA_m:', AIA_m)
+    LOG.info('AIA_s:', AIA_s)
 
     np.save("%s/aia_mean.npy" % args.base,AIA_m)
     np.save("%s/aia_std.npy" % args.base,AIA_s)

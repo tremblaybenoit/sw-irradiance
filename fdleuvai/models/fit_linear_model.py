@@ -16,7 +16,7 @@ from netCDF4 import Dataset
 import skimage
 
 # Add s4pi module to patch
-_S4PI_DIR = os.path.abspath(__file__).split('/')[:-3]
+_S4PI_DIR = os.path.abspath(__file__).split('/')[:-4]
 _S4PI_DIR = os.path.join('/',*_S4PI_DIR)
 sys.path.append(_S4PI_DIR+'/4piuvsun/')
 from s4pi.data.preprocessing import loadAIAMap
@@ -126,8 +126,17 @@ def getXy(eve_data, data_root, split, debug=True):
     LOG.info('Start process map')
 
     Xs = process_map(handleStd, fnList, chunksize=5)
-
     X = np.concatenate(Xs,axis=0)
+
+    total_finite = np.sum(np.isfinite(X), axis=1)
+    valid_entries = total_finite == np.max(total_finite)
+
+    if np.sum(valid_entries) < matches.shape[0]:
+        LOG.info(f'Clean problematic files and remove them from the {split} csv')
+        matches = matches.loc[valid_entries,:].reset_index(drop=True)
+        matches.to_csv(data_root+split+'.csv', index=False)
+        X = X[valid_entries, :]
+        y = y[valid_entries, :]   
    
     mask = y < 0
     y[mask] = 0
@@ -145,15 +154,6 @@ def getResid(y,yp,mask,flare=None,flarePct=0.975):
 
 def fitSGDR_Huber(X,Y,maxIter=10,epsFrac=1.0,logalpha=-4):
 
-    # Remove non-finite points
-    finite_mask = np.sum(np.isfinite(Y),axis=1)==14
-    X = X[finite_mask,:]
-    Y = Y[finite_mask,:]
-
-    finite_mask = np.sum(np.isfinite(X),axis=1)==9
-    Y = Y[finite_mask,:]
-    X = X[finite_mask,:]
-
     alpha = 10**logalpha
     K = Y.shape[1]
     models = []
@@ -170,29 +170,9 @@ def applySGDmodel(X,models):
     return np.concatenate(yp,axis=1)
 
 def cvSGDH(XTr,YTr,XVa,YVa,maskVa):
-
-    # Remove non-finite points
-    finite_mask = np.sum(np.isfinite(YTr),axis=1)==14
-    XTr = XTr[finite_mask,:]
-    YTr = YTr[finite_mask,:]
-
-    finite_mask = np.sum(np.isfinite(XTr),axis=1)==9
-    YTr = YTr[finite_mask,:]
-    XTr = XTr[finite_mask,:]
-
-
-    finite_mask = np.sum(np.isfinite(YVa),axis=1)==14
-    XVa = XVa[finite_mask,:]
-    YVa = YVa[finite_mask,:]
-
-    finite_mask = np.sum(np.isfinite(XVa),axis=1)==9
-    YVa = YVa[finite_mask,:]
-    XVa = XVa[finite_mask,:]
-
-
     bestPerformance, bestP, bestA = np.inf, 1, 0
     print("CV'ing huber epsilon, regularization")
-    for p in range(1,10,1):
+    for p in range(1,20,2):
         for a in range(-5,1):
             model = fitSGDR_Huber(XTr,YTr,maxIter=10,epsFrac=1.0/p,logalpha=a)
             
@@ -212,10 +192,6 @@ def cvSGDH(XTr,YTr,XVa,YVa,maskVa):
     return W
 
 def getNormalize(XTr):
-
-    # Remove non-finite elements
-    finite_mask = np.sum(np.isfinite(XTr),axis=1)==8
-    XTr = XTr[finite_mask,:]
 
     mu = np.nanmean(XTr,axis=0)
     sig = np.nanstd(XTr,axis=0)
@@ -245,13 +221,13 @@ if __name__ == "__main__":
     eve_data = eve_data[:,line_indices]
 
     #get the data
-    debug=True
+    debug=False
 
     XTr, YTr, maskTr = getXy(eve_data, data_root, "train", debug=debug)
     XVa, YVa, maskVa = getXy(eve_data, data_root, "val", debug=debug)
     XTe, ___, ______ = getXy(eve_data, data_root, "test", debug=debug)
 
-    np.savez_compressed("%s/mean_std_feats.npz" % data_root,XTr=XTr,XVa=XVa,XTe=XTe)
+    # np.savez_compressed("%s/mean_std_feats.npz" % data_root,XTr=XTr,XVa=XVa,XTe=XTe)
 
     mu, sig = getNormalize(XTr)
 
@@ -266,39 +242,8 @@ if __name__ == "__main__":
     YVap = np.dot(XVa,model.T) 
     YTep = np.dot(XTe,model.T)
 
-    #these are the new targets
-    diffTr = YTr - YTrp; diffTr[maskTr] = 0
-    diffVa = YVa - YVap; diffVa[maskVa] = 0
-
-      #new statistics
-    residualMean = np.mean(diffTr,axis=0)   
-    residualStd = np.std(diffTr,axis=0)   
- 
-    np.save("%s/eve_residual_mean_14ptot.npy" % data_root, residualMean)
-    np.save("%s/eve_residual_std_14ptot.npy" % data_root, residualStd)
-
     save_prediction(eve, line_indices, YTrp, data_root, 'train', debug=debug)
     save_prediction(eve, line_indices, YVap, data_root, 'val', debug=debug)
     save_prediction(eve, line_indices, YTep, data_root, 'test', debug=debug)
 
     eve.close()
-
-
-    
-    # #update EVE
-    # EVE = np.load(EVE_path)
-    # updates = [("train",diffTr),("val",diffVa)]
-    # for phaseName,newVals in updates:
-    #     yind, xind = getEVEInd(data_root, phaseName)
-    #     for yii,yi in enumerate(yind):
-    #         EVE[yi,xind] = newVals[yii,:]
-
-
-    # #rescale targets
-    # EVE *= 100
-
-    # #Save the new target and the model
-    # np.save("%s/irradiance_30mn_residual_14ptot.npy" % data_root, EVE)
-    # np.savez_compressed("%s/residual_initial_model.npz" % data_root,model=model,mu=mu,sig=sig)
-
-    
