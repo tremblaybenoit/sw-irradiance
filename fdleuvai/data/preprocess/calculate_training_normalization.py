@@ -99,6 +99,7 @@ if __name__ == "__main__":
         AIA_samples = AIA_samples[:, valid_entries, : , :]
 
     LOG.info('Calculating mean and std for AIA files')
+    AIA_samples[AIA_samples<0] = 0
     AIA_samples_sqrt = np.sqrt(AIA_samples)
     AIA_m_sqrt = np.nanmean(AIA_samples_sqrt,axis=(1,2,3))
     AIA_s_sqrt = np.nanstd(AIA_samples_sqrt,axis=(1,2,3))
