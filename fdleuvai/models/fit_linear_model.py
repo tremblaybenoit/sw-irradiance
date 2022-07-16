@@ -12,7 +12,6 @@ from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 import logging
 from netCDF4 import Dataset
-import skimage
 
 # Add utils module to load stacks
 _FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-3]
