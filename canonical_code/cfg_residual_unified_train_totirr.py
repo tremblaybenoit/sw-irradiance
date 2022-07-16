@@ -277,7 +277,7 @@ if __name__ == "__main__":
             aia_std = np.load("%s/aia_sqrt_std.npy" % data_root)
             aia_transform = transforms.Compose([transforms.Normalize(tuple(aia_mean),tuple(aia_std))])
         else : # we don't sqrt and just divide by the means. just need to trick the transform
-            aia_mean = np.zeros(14)
+            aia_mean = np.zeros(nb_channels)
             aia_std = np.load('%s/aia_mean.npy' % data_root)
             aia_transform = transforms.Compose([transforms.Normalize(tuple(aia_mean),tuple(aia_std))])
             
