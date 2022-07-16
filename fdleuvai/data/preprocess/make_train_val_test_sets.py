@@ -6,8 +6,8 @@ import argparse
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--src',dest='src',required=True)
-    parser.add_argument('--splits',dest='splits',required=False,default='rve',help='rve=train/val/test;rv=train/val;re=train/test')
+    parser.add_argument('-src',dest='src',required=True)
+    parser.add_argument('-splits',dest='splits',required=False,default='rve',help='rve=train/val/test;rv=train/val;re=train/test')
     args = parser.parse_args()
     return args
 

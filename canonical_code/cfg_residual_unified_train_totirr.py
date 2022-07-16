@@ -137,10 +137,10 @@ def unlock(path):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--src',dest='src',required=True)
-    parser.add_argument('--target',dest='target',required=True)
-    parser.add_argument('--data_root',dest='data_root',required=True)
-    parser.add_argument('--nb_channels',dest='nb_channels', default=4, type=int,
+    parser.add_argument('-src',dest='src',required=True)
+    parser.add_argument('-target',dest='target',required=True)
+    parser.add_argument('-data_root',dest='data_root',required=True)
+    parser.add_argument('-nb_channels',dest='nb_channels', default=4, type=int,
                         help='Number of SDO/AIA channels used.')
     args = parser.parse_args()
     return args
@@ -183,8 +183,8 @@ if __name__ == "__main__":
         # logFile = "%s/%s_log.txt" % (targetBase, cfgName)
 
         print(modelFile)
-        if os.path.exists(modelFile) or isLocked(modelFile+".lock"):
-            continue
+        # if os.path.exists(modelFile) or isLocked(modelFile+".lock"):
+        #     continue
         
         sw_net = None
         

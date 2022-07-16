@@ -57,7 +57,7 @@ def getX(data_root):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--base',dest='base',required=True)
+    parser.add_argument('-base',dest='base',required=True)
     args = parser.parse_args()
     return args
 

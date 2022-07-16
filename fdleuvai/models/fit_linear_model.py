@@ -197,10 +197,10 @@ def getNormalize(XTr):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--base',dest='base',required=True)
-    parser.add_argument('--debug', dest='debug', type=bool, default=False, help='Only process a few files')
-    parser.add_argument('--resolution', dest='resolution', default=256, type=int)
-    parser.add_argument('--remove_off_limb', dest='remove_off_limb', type=bool, default=False, help='Whether to remove offlimb during preprocess')    
+    parser.add_argument('-base',dest='base',required=True)
+    parser.add_argument('-debug', dest='debug', type=bool, default=False, help='Only process a few files')
+    parser.add_argument('-resolution', dest='resolution', default=256, type=int)
+    parser.add_argument('-remove_off_limb', dest='remove_off_limb', type=bool, default=False, help='Whether to remove offlimb during preprocess')    
 
     args = parser.parse_args()
     return args

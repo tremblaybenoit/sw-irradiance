@@ -93,11 +93,11 @@ def eve_unscale(y,mean,std,nonlinearity,sigmoid, zscore):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--src',dest='src',required=True)
-    parser.add_argument('--models',dest='models',required=True)
-    parser.add_argument('--target',dest='target',required=True)
-    parser.add_argument('--data_root',dest='data_root',required=True)
-    parser.add_argument('--phase',dest='phase',default='test')
+    parser.add_argument('-src',dest='src',required=True)
+    parser.add_argument('-models',dest='models',required=True)
+    parser.add_argument('-target',dest='target',required=True)
+    parser.add_argument('-data_root',dest='data_root',required=True)
+    parser.add_argument('-phase',dest='phase',default='test')
     args = parser.parse_args()
     return args
 
