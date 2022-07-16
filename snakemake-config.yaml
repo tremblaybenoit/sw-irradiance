@@ -6,7 +6,7 @@ aia_path: "/mnt/miniset/aia-jsoc"
 eve_base_path: "/home/miraflorista/sw-irradiance/data/EVE"
 
 # Path to place all calculations
-sw-irr-output_path: "/home/andres_munoz_j/sw-irr-output-clean"
+sw-irr-output_path: "/home/andres_munoz_j/sw-irr-output"
 
 # Model results
 model_results_path: "home/andres_munoz_j/model_results"
