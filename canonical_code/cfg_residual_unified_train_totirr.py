@@ -4,7 +4,7 @@
 
 '''
 Given a directory of config files, trains nets to map
-9 AIA channels to 15 EVE MEGS-A channels using a previously
+ AIA channels to EVE MEGS-A channels using a previously
 fitted linear model (see setup_residual_totirr.py)
 '''
 
@@ -140,7 +140,7 @@ def parse_args():
     parser.add_argument('-src',dest='src',required=True)
     parser.add_argument('-target',dest='target',required=True)
     parser.add_argument('-data_root',dest='data_root',required=True)
-    parser.add_argument('-nb_channels',dest='nb_channels', default=4, type=int,
+    parser.add_argument('-n_channels',dest='n_channels', default=4, type=int,
                         help='Number of SDO/AIA channels used.')
     parser.add_argument('-resolution', dest='resolution', default=256, type=int)
     parser.add_argument('-remove_off_limb', dest='remove_off_limb', type=bool, default=False, help='Remove Off-limb')
@@ -151,11 +151,12 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args() 
 
-    # Number of channels for SDO/AIA
-    nb_channels = args.nb_channels
 
-    remove_off_limb = args.remove_off_limb
     debug = args.debug
+    remove_off_limb = args.remove_off_limb
+    data_root = args.data_root
+    EVE_path = "%s/EVE_irradiance.nc" % data_root
+    csv_dir = args.data_root    
 
     #handle setup
     if not os.path.exists(args.target):
@@ -165,11 +166,17 @@ if __name__ == "__main__":
     cfgs.sort()
     
     random.shuffle(cfgs)
-
     
     for cfgi,cfgPath in enumerate(cfgs):
 
         cfg = json.load(open("%s/%s" % (args.src,cfgPath)))
+
+        n_channels = cfg['aia_channels']
+        batch_size = cfg['batch_size']
+        flip = cfg['flip']
+        zscore = cfg['zscore']
+        resolution = cfg['in_resolution']
+        eve_channels = cfg['eve_channels']       
 
         print(cfg)
 
@@ -199,55 +206,55 @@ if __name__ == "__main__":
             sw_net = models.resnet18(pretrained = False)
             num_ftrs = sw_net.fc.in_features
             sw_net.avgpool = nn.AdaptiveAvgPool2d((1,1))
-            sw_net.conv1 = nn.Conv2d(nb_channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+            sw_net.conv1 = nn.Conv2d(n_channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
             if cfg['dropout']:
                 sw_net.fc = nn.Sequential(
                     nn.Dropout(0.5),
-                    nn.Linear(num_ftrs, 15)
+                    nn.Linear(num_ftrs, eve_channels)
                 )
             else:
-                sw_net.fc = nn.Linear(num_ftrs, 15)
+                sw_net.fc = nn.Linear(num_ftrs, eve_channels)
         
         elif cfg['arch'] == "drn_d_22":
             sw_net = drn_d_22(pretrained = False)
             num_ftrs = sw_net.fc.in_channels
-            sw_net.layer0[0] = nn.Conv2d(nb_channels, 16, kernel_size=(7, 7), stride=(1, 1), padding=(3, 3), bias=False)
+            sw_net.layer0[0] = nn.Conv2d(n_channels, 16, kernel_size=(7, 7), stride=(1, 1), padding=(3, 3), bias=False)
             if cfg['dropout']:
                 sw_net.fc = nn.Sequential(
                     nn.Dropout(0.5),
-                    nn.Conv2d(num_ftrs, 15, kernel_size=(1, 1), stride=(1, 1))
+                    nn.Conv2d(num_ftrs, eve_channels, kernel_size=(1, 1), stride=(1, 1))
                 )
             else:
-                sw_net.fc = nn.Conv2d(num_ftrs, 15, kernel_size=(1, 1), stride=(1, 1))  
+                sw_net.fc = nn.Conv2d(num_ftrs, eve_channels, kernel_size=(1, 1), stride=(1, 1))  
                 
         elif cfg['arch'] == "avg_mlp":
-            sw_net = alt_models.AvgMLP(nb_channels,1024,15, cfg['dropout'])
+            sw_net = alt_models.AvgMLP(n_channels,1024,eve_channels, cfg['dropout'])
         elif cfg['arch'] == 'augresnet':
-            sw_net = alt_models.AugResnet2(models.resnet18(pretrained=False), 15, cfg['dropout'])
+            sw_net = alt_models.AugResnet2(models.resnet18(pretrained=False), eve_channels, cfg['dropout'])
         elif cfg['arch'] == 'augCNN':
             sw_net = alt_models.AugmentedCNN()
         elif cfg['arch'] == 'avgLinear':
-            sw_net = alt_models.AvgLinearMap(nb_channels,15)
+            sw_net = alt_models.AvgLinearMap(n_channels,eve_channels)
 
         elif cfg['arch'].startswith("anet64bn"):
             layerCount = int(cfg['arch'].split("_")[1])
-            sw_net = alt_models.ChoppedAlexnet64BN(layerCount,15,cfg['dropout'])
+            sw_net = alt_models.ChoppedAlexnet64BN(layerCount,eve_channels,cfg['dropout'])
 
         elif cfg['arch'].startswith("anet64"):
             layerCount = int(cfg['arch'].split("_")[1])
-            sw_net = alt_models.ChoppedAlexnet64(layerCount,15,cfg['dropout'])
+            sw_net = alt_models.ChoppedAlexnet64(layerCount,eve_channels,cfg['dropout'])
 
         elif cfg['arch'].startswith("anet"):
             layerCount = int(cfg['arch'].split("_")[1])
             if (len(cfg['arch'].split("_")) == 2): ###name is anet_numlayers
-                sw_net = alt_models.ChoppedAlexnet(layerCount,15,cfg['dropout'])
+                sw_net = alt_models.ChoppedAlexnet(layerCount, n_channels, eve_channels,cfg['dropout'])
             elif (len(cfg['arch'].split("_")) == 3): ### name is anet_numlayers_bn
-                sw_net = alt_models.ChoppedAlexnetBN(layerCount,15,cfg['dropout'])
+                sw_net = alt_models.ChoppedAlexnetBN(layerCount, n_channels, eve_channels,cfg['dropout'])
             else:
                 raise ValueError('Arch not defined')
         elif cfg['arch'].startswith("vgg"):
             layerCount = int(cfg['arch'].split("_")[1])
-            sw_net = alt_models.ChoppedVGG(layerCount,15,cfg['dropout'])
+            sw_net = alt_models.ChoppedVGG(layerCount,eve_channels,cfg['dropout'])
         else:
             print("Model not defined")
         
@@ -257,34 +264,14 @@ if __name__ == "__main__":
         if cfg['loss'] == "L2":
             criterion = nn.MSELoss()
         elif cfg['loss'] == "L1":
-            criterion = nn.SmoothL1Loss()
-
-
-        # Benito: 
-        # Data_path = '../andres_munoz_j/sw-irr-output/'
-        ### Some inputs
-        data_root = args.data_root
-
-        # Benito: Path to residuals for both train/val
-        EVE_path = "%s/EVE_irradiance.nc" % data_root
-        # Benito: We saved everything in 3 separate files (training, val, test).
-
-        csv_dir = data_root
-        crop = cfg['crop']
-        batch_size = 64
-        resolution = args.resolution
-        remove_off_limb = args.remove_off_limb
-        crop_res = 240
-        flip = cfg['flip']
-        zscore = cfg['zscore']
-        
+            criterion = nn.SmoothL1Loss()     
         
         if (zscore): # we apply whatever scaling if zscore is on
             aia_mean = np.load("%s/aia_sqrt_mean.npy" % data_root)
             aia_std = np.load("%s/aia_sqrt_std.npy" % data_root)
             aia_transform = transforms.Compose([transforms.Normalize(tuple(aia_mean),tuple(aia_std))])
         else : # we don't sqrt and just divide by the means. just need to trick the transform
-            aia_mean = np.zeros(nb_channels)
+            aia_mean = np.zeros(n_channels)
             aia_std = np.load('%s/aia_mean.npy' % data_root)
             aia_transform = transforms.Compose([transforms.Normalize(tuple(aia_mean),tuple(aia_std))])
             
