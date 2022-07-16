@@ -169,17 +169,23 @@ if __name__ == "__main__":
 
         cfgName = cfgPath.replace(".json","")
 
-        targetBase =  "%s/%s/" % (args.target,cfgName)
+        targetBase =  "%s/%s" % (args.target,cfgName)
         if not os.path.exists(targetBase):
             os.mkdir(targetBase)
 
-        modelFile = "%s/%s_model.pt" % (targetBase,cfgName)
-        logFile = "%s/%s_log.txt" % (targetBase, cfgName)
+
+        modelFile = f"{targetBase}/{cfgName}_model.pt"
+        logFile = f"{targetBase}/{cfgName}_log.txt"
+
+
+
+        # modelFile = "%s/%s_model.pt" % (targetBase,cfgName)
+        # logFile = "%s/%s_log.txt" % (targetBase, cfgName)
 
         print(modelFile)
         if os.path.exists(modelFile) or isLocked(modelFile+".lock"):
             continue
-
+        
         sw_net = None
         
         if cfg['arch'] == "resnet_18":
@@ -254,7 +260,7 @@ if __name__ == "__main__":
         data_root = args.data_root
 
         # Benito: Path to residuals for both train/val
-        EVE_path = "%s/irradiance_30mn_residual_14ptot.npy" % data_root
+        EVE_path = "%s/EVE_irradiance.nc" % data_root
         # Benito: We saved everything in 3 separate files (training, val, test).
 
         csv_dir = data_root
@@ -278,7 +284,6 @@ if __name__ == "__main__":
         ### Dataset & Dataloader for train and validation
         # Benito: I modified SW_Dataset
         # SW_Dataset (self, EVE_path, AIA_root, index_file, resolution, EVE_scale, EVE_sigmoid, split = 'train', AIA_transform = None, flip = False, crop = False, crop_res = None, zscore = True, self_mean_normalize=False):
-
         sw_datasets = {x: SW_Dataset(EVE_path, data_root, csv_dir, resolution, cfg['eve_transform'], cfg['eve_sigmoid'], split = x, AIA_transform = aia_transform, flip=flip, crop = crop, crop_res = crop_res, zscore = zscore,self_mean_normalize=True) for x in ['train', 'val']}
 
         sw_dataloaders = {x: torch.utils.data.DataLoader(sw_datasets[x], batch_size = batch_size, shuffle = True, num_workers=8) for x in ['train', 'val']}

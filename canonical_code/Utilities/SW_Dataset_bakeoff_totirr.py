@@ -15,6 +15,7 @@ import pdb
 import json
 import skimage.transform
 import logging
+from netCDF4 import Dataset
 
 # Add s4pi module to patch
 _S4PI_DIR = os.path.abspath(__file__).split('/')[:-3]
@@ -87,14 +88,14 @@ class SW_Dataset(Dataset):
 
     ''' Dataset class to get inputs and labels for AIA-->EVE mapping'''
 
-    def __init__(self, EVE_path, AIA_root, index_file, resolution, EVE_scale, EVE_sigmoid, split = 'train', AIA_transform = None, flip = False, crop = False, crop_res = None, zscore = True, self_mean_normalize=False):
+    def __init__(self, EVE_path, AIA_root, index_folder, resolution, EVE_scale, EVE_sigmoid, split = 'train', AIA_transform = None, flip = False, crop = False, crop_res = None, zscore = True, self_mean_normalize=False):
 
         """_summary_
 
         Args:
-            EVE_path: Path to eve_mean.npy, etc.
+            EVE_path: File containing the EVE residuals.
             AIA_root: Path to aia_mean.npy, etc.
-            index_file: Path to train.csv, etc.
+            index_folder: Path to train.csv, etc.
 
         Returns:
             : 
@@ -110,8 +111,8 @@ class SW_Dataset(Dataset):
         self.flip = flip
         
         ### load indices from csv file for the given split
-        # Benito: index_file is a path
-        df_indices = pd.read_csv(index_file+split+'.csv')
+        # Benito: index_folder is a path
+        df_indices = pd.read_csv(index_folder+split+'.csv')
         
         ### resolution. normal is 224, if 256 we perform crops
         self.resolution = resolution
@@ -125,7 +126,7 @@ class SW_Dataset(Dataset):
         self.index_aia = AIA_root + np.asarray(df_indices[[channel for channel in df_indices.columns[2:-1]]])
 
         ### last column is EVE index
-        self.index_eve = np.asarray(df_indices[df_indices.columns[-1]]).astype(int)
+        self.index_eve = np.asarray(df_indices["eve_indices"]).astype(int)
        
         ### EVE processing. What scaling do we use? Do we apply sigmoid? Pass means and stds (computed on scaled EVE)
         ### They are located in the index file (csv) path)
@@ -135,32 +136,25 @@ class SW_Dataset(Dataset):
         self.EVE_sigmoid = EVE_sigmoid
         self.zscore = zscore
         
-        self.EVE_means = np.load(index_file + 'eve_'+EVE_scale+'_mean.npy')
-        self.EVE_stds = np.load(index_file + 'eve_'+EVE_scale+'_std.npy')
+        self.EVE_means = np.load(index_folder + 'eve_'+EVE_scale+'_mean.npy')
+        self.EVE_stds = np.load(index_folder + 'eve_'+EVE_scale+'_std.npy')
         if (EVE_sigmoid):
-            self.EVE_means = np.load(index_file+ 'eve_'+EVE_scale+'sigmoid'+'_mean.npy')
-            self.EVE_stds = np.load(index_file + 'eve_'+EVE_scale+'sigmoid'+'_std.npy')
+            self.EVE_means = np.load(index_folder+ 'eve_'+EVE_scale+'sigmoid'+'_mean.npy')
+            self.EVE_stds = np.load(index_folder + 'eve_'+EVE_scale+'sigmoid'+'_std.npy')
         
         if (not zscore):
-            self.EVE_means = np.load(index_file+'eve_mean.npy')
-            self.EVE_stds = np.load(index_file + 'eve_std.npy')
-            
-        ### need to get rid of the line 13 because no measurements !
-        # full_EVE = np.load(EVE_path)[:,[0,1,2,3,4,5,6,7,8,9,10,11,12,14,-1]]  
-        # full_EVE = np.load(EVE_path)[:,[0,1,2,3,4,5,6,7,8,9,10,11,12,14]]    
+            self.EVE_means = np.load(index_folder+'eve_mean.npy')
+            self.EVE_stds = np.load(index_folder + 'eve_std.npy')
+
+        self.line_indices = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,14])
+        # eve = Dataset(EVE_path, "r", format="NETCDF4")
+        # full_EVE = eve.variables['irradiance'][:][:, self.line_indices]
         # self.EVE = full_EVE[self.index_eve,:]
-        # matches = pd.read_csv(data_root+split+'.csv')
-        # Load Json file
-        # Benito: Modified version. Using hardcoded paths, but will be replaced
-        LOG.info('Loading Eve.json')
-        eve = json.load(open("/home/miraflorista/sw-irradiance/data/EVE/EVE.json"))  #loading dictionary with eve data
-        eve_data = np.array(eve["data"])
-        matches = pd.read_csv(data_root+split+'.csv')
-        full_EVE = eve_data[matches['eve_indices'].values, [0,1,2,3,4,5,6,7,8,9,10,11,12,14]]
-        self.EVE = full_EVE[self.index_eve,:]
-        # Benito: Load residuals here? We didn't save the way they did.
-        # EVE_linear_pred_train.json
-        # EVE_linear_pred_val.json 
+        # eve.close()
+
+        # predictionDB = Dataset( index_folder + 'EVE_linear_pred_' + split + '.nc')
+        # self.EVE_residual = predictionDB.variables['irradiance'][:] - predictionDB.variables['pred_irradiance'][:]
+        # predictionDB.close()
 
         ### AIA transform : means and stds of sqrt(AIA)
         self.AIA_transform = AIA_transform
@@ -177,6 +171,8 @@ class SW_Dataset(Dataset):
             raise ValueError('Cropping resolution must be smaller than initial resolution')
         
         print('Loaded ' + split + ' Dataset with ' + str(len(self.index_eve))+' examples' )
+
+
 
     def __len__(self):
 
@@ -226,7 +222,7 @@ class SW_Dataset(Dataset):
             AIA_sample = torch.from_numpy(aia_scale(AIA_sample, self.zscore, self.self_mean_normalize))  
             
        
-        EVE_sample = torch.from_numpy( eve_scale(self.EVE[index, :], self.EVE_means, 
+        EVE_sample = torch.from_numpy( eve_scale(self.EVE_residual[index, :], self.EVE_means, 
                                       self.EVE_stds, self.EVE_scale, self.EVE_sigmoid, self.zscore).astype( np.float32) ).float()
     
         if (self.AIA_transform):
