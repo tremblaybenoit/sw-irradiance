@@ -13,7 +13,9 @@ rule create_eve_netcdf:
     output:
         eve_netcdf_path= config["sw-irr-output_path"]+"/EVE_irradiance.nc"
     shell:
-        "python fdleuvai/data/preprocess/create_eve_netcdf.py -eve_raw_path {input.eve_raw_path} -netcdf_outpath {output.eve_netcdf_path}"
+        "python fdleuvai/data/preprocess/create_eve_netcdf.py \
+        -eve_raw_path {input.eve_raw_path} \
+        -netcdf_outpath {output.eve_netcdf_path}"
 
 
 ## generates matches between EVE data and the AIA files
@@ -22,11 +24,18 @@ rule generate_matches_time:
         eve_netcdf_path = config["sw-irr-output_path"]+"/EVE_irradiance.nc",
         aia_path = config["aia_path"]
     params:
-        match_outpath = config["sw-irr-output_path"]
+        match_outpath = config["sw-irr-output_path"],
+        debug = config["DEBUG"]
     output:
         matches_output = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv"
     shell:
-        "python fdleuvai/data/preprocess/generate_matches_time.py -eve_path {input.eve_netcdf_path} -aia_path {input.aia_path} -out_path {params.match_outpath}"
+        """
+        python fdleuvai/data/preprocess/generate_matches_time.py \
+        -eve_path {input.eve_netcdf_path} \
+        -aia_path {input.aia_path} \
+        -out_path {params.match_outpath}\
+        --debug {params.debug}
+        """
 
 ## generates train, test, values datasets 
 rule make_train_val_test_sets:
@@ -45,7 +54,10 @@ rule make_train_val_test_sets:
 ## fits means and stds to linear model
 rule fit_linear_model:
     params:
-        basepath = config["sw-irr-output_path"]
+        basepath = config["sw-irr-output_path"],
+        resolution = config["RESOLUTION"],
+        remove_off_limb = config["REMOVE_OFFLIMB"],
+        debug = config["DEBUG"]
     input:
       expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"]),
       eve_netcdf_path=config["sw-irr-output_path"]+"/EVE_irradiance.nc"
@@ -58,7 +70,9 @@ rule fit_linear_model:
         """
         python fdleuvai/models/fit_linear_model.py \
         --base {params.basepath} \
-        --divide 4
+        --resolution {params.resolution}\
+        --remove_off_limb {params.remove_off_limb}\
+        --debug {params.debug}
         """
 
 ## Creates the normalization values based on the train set
@@ -67,7 +81,9 @@ rule calculate_training_normalization:
         matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv",
     params:
         basepath = config["sw-irr-output_path"],
-        divide = 4
+        resolution = config["RESOLUTION"],
+        remove_off_limb = config["REMOVE_OFFLIMB"],
+        debug = config["DEBUG"]
     output:
         eve_norm_stats=expand(config["sw-irr-output_path"] + "/eve_{norm_stat}.npy", norm_stat=config["EVE-NORM-STATISTIC"]),
         aia_norm_stats=expand(config["sw-irr-output_path"] + "/aia_{norm_stat}.npy", norm_stat=config["AIA-NORM-STATISTIC"])
@@ -75,7 +91,9 @@ rule calculate_training_normalization:
         """
         python fdleuvai/data/preprocess/calculate_training_normalization.py \
         --base {params.basepath} \
-        --divide {params.divide}
+        --resolution {params.resolution}\
+        --remove_off_limb {params.remove_off_limb}\
+        --debug {params.debug}
         """
 
 ## train CNN

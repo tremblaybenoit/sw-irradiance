@@ -2,7 +2,7 @@ from iti.data.editor import LoadMapEditor, NormalizeRadiusEditor, RemoveOffLimbE
 import numpy as np
 
 def loadAIAMap(file_path, resolution=1024, remove_off_limb=False):
-    """Load and preprocess AIA file.
+    """Load and preprocess AIA file to make them compatible to ITI.
 
 
     Parameters
@@ -21,3 +21,22 @@ def loadAIAMap(file_path, resolution=1024, remove_off_limb=False):
     if remove_off_limb:
         s_map = RemoveOffLimbEditor(fill_value=np.nan).call(s_map)
     return s_map
+
+
+def loadAIAStack(file_paths, resolution=1024, remove_off_limb=False):
+    """Load a stack of AIA files, preprocess them at a specfied resolution, and stackt hem.
+
+
+    Parameters
+    ----------
+    file_paths: list of files to stack.
+    resolution: target resolution in pixels of 2.2 solar radii.
+    remove_off_limb: set all off-limb pixels to NaN (optional).
+
+    Returns
+    -------
+    numpy array with AIA stack
+    """
+
+    return np.asarray([np.expand_dims(loadAIAMap(aia_file, resolution=resolution, remove_off_limb=remove_off_limb).data, axis=0) for aia_file in file_paths], dtype = np.float64)
+        

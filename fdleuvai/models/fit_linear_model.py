@@ -18,7 +18,7 @@ import skimage
 _FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-3]
 _FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
 sys.path.append(_FDLEUVAI_DIR)
-from fdleuvai.data.utils import loadAIAMap
+from fdleuvai.data.utils import loadAIAStack
 
 
 # Initialize Python Logger
@@ -41,9 +41,7 @@ def getEVEInd(data_root,split):
 
 def handleStd(index_aia_i):
 
-    divide = 4
-
-    AIA_sample = np.asarray([np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(loadAIAMap(aia_file).data, (divide, divide)), axis=0) for aia_file in index_aia_i], dtype = np.float64 )
+    AIA_sample = loadAIAStack(index_aia_i, resolution=resolution, remove_off_limb=remove_off_limb)
     X = np.nanmean(AIA_sample,axis=(1,2,3))
     X = np.concatenate([X,np.nanstd(AIA_sample,axis=(1,2,3))],axis=0)
     return np.expand_dims(X,axis=0)
@@ -201,7 +199,9 @@ def getNormalize(XTr):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--base',dest='base',required=True)
-    parser.add_argument('--divide',dest='divide',default=4,required=True, type=int)
+    parser.add_argument('--debug', dest='debug', type=bool, default=False, help='Only process a few files')
+    parser.add_argument('--resolution', dest='resolution', default=256, type=int)
+    parser.add_argument('--remove_off_limb', dest='remove_off_limb', type=bool, default=False, help='Whether to remove offlimb during preprocess')    
 
     args = parser.parse_args()
     return args
@@ -210,6 +210,11 @@ if __name__ == "__main__":
     args = parse_args()
 
     data_root = args.base
+    debug = args.debug
+    global resolution
+    resolution = args.resolution
+    global remove_off_limb
+    remove_off_limb = args.remove_off_limb    
 
     # Load nc file
     LOG.info('Loading EVE_irradiance.nc')
@@ -220,7 +225,6 @@ if __name__ == "__main__":
     eve_data = eve_data[:,line_indices]
 
     #get the data
-    debug=False
 
     XTr, YTr, maskTr = getXy(eve_data, data_root, "train", debug=debug)
     XVa, YVa, maskVa = getXy(eve_data, data_root, "val", debug=debug)

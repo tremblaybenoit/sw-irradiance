@@ -16,7 +16,7 @@ import logging
 _FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-4]
 _FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
 sys.path.append(_FDLEUVAI_DIR)
-from fdleuvai.data.utils import loadAIAMap
+from fdleuvai.data.utils import loadAIAStack
 
 # Initialize Python Logger
 logging.basicConfig(format='%(levelname)-4s '
@@ -29,17 +29,14 @@ LOG.setLevel(logging.INFO)
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--base',dest='base',required=True)
-    parser.add_argument('--remove_off_limb', action='store_true', help='Remove Off-limb')
-    parser.add_argument('--divide',dest='divide',default=4,required=True, type=int)
+    parser.add_argument('--remove_off_limb', dest='remove_off_limb', type=bool, default=False, help='Remove Off-limb')
+    parser.add_argument('--debug', dest='debug', type=bool, default=False, help='Only process a few files')
+    parser.add_argument('--resolution', dest='resolution', default=256, type=int)
     args = parser.parse_args()
     return args
 
 def handleStd(index_aia_i):
-
-    divide = 4
-    AIA_sample = np.asarray([np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(loadAIAMap(aia_file).data, (divide, divide)), axis=0) for aia_file in index_aia_i], dtype = np.float64 )
-    
-    return AIA_sample
+    return loadAIAStack(index_aia_i, resolution=resolution, remove_off_limb=remove_off_limb)
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -47,13 +44,18 @@ def sigmoid(x):
 if __name__ == "__main__":
     args = parse_args()
     args.base = "%s/" % (args.base)
-    divide = args.divide
+    global resolution
+    resolution = args.resolution
+    global remove_off_limb
+    remove_off_limb = args.remove_off_limb
 
     # Load nc file
     LOG.info('Loading EVE_irradiance.nc')
     eve = Dataset(args.base + 'EVE_irradiance.nc', "r", format="NETCDF4")
     train = pd.read_csv(args.base+"/train.csv")
-    
+
+    if args.debug:
+        train = train.loc[0:4,:]    
     
     LOG.info('Calculate mean and std of EVE lines')
     Y = eve.variables['irradiance'][:]

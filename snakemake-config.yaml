@@ -1,3 +1,11 @@
+# debug flag this runs pipeline with only 10 files
+DEBUG: True
+
+# AIA resolution to use
+RESOLUTION: 256
+
+# Whether to remove off limb or on not
+REMOVE_OFFLIMB: False
 
 # AIA location
 aia_path: "/mnt/miniset/aia-jsoc"

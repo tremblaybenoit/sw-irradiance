@@ -99,8 +99,7 @@ if __name__ == "__main__":
                    help='cutoff_eve')
     p.add_argument('-cutoff_aia', type=float, default=600,
                    help='cutoff_aia')
-    p.add_argument('-debug', action='store_true',
-                   help='Debug flag')
+    p.add_argument('-debug', dest='debug', type=bool, default=False, help='Only process a few files')
     args = p.parse_args()
 
     eve_path = args.eve_path
