@@ -15,7 +15,7 @@ import pdb
 import json
 import skimage.transform
 import logging
-from netCDF4 import Dataset
+import netCDF4 as nc
 
 # Add s4pi module to patch
 _S4PI_DIR = os.path.abspath(__file__).split('/')[:-3]
@@ -112,7 +112,7 @@ class SW_Dataset(Dataset):
         
         ### load indices from csv file for the given split
         # Benito: index_folder is a path
-        df_indices = pd.read_csv(index_folder+split+'.csv')
+        df_indices = pd.read_csv(index_folder+'/'+split+'.csv')
         
         ### resolution. normal is 224, if 256 we perform crops
         self.resolution = resolution
@@ -123,7 +123,8 @@ class SW_Dataset(Dataset):
         
         ### all AIA channels. first two columns are junk
         # Benito: Is that the case for us?
-        self.index_aia = AIA_root + np.asarray(df_indices[[channel for channel in df_indices.columns[2:-1]]])
+        aia_columns = [col for col in df_indices.columns if 'AIA' in col]
+        self.index_aia = df_indices[aia_columns].values.tolist()
 
         ### last column is EVE index
         self.index_eve = np.asarray(df_indices["eve_indices"]).astype(int)
@@ -136,25 +137,25 @@ class SW_Dataset(Dataset):
         self.EVE_sigmoid = EVE_sigmoid
         self.zscore = zscore
         
-        self.EVE_means = np.load(index_folder + 'eve_'+EVE_scale+'_mean.npy')
-        self.EVE_stds = np.load(index_folder + 'eve_'+EVE_scale+'_std.npy')
+        self.EVE_means = np.load(index_folder + '/eve_'+EVE_scale+'_mean.npy')
+        self.EVE_stds = np.load(index_folder + '/eve_'+EVE_scale+'_std.npy')
         if (EVE_sigmoid):
-            self.EVE_means = np.load(index_folder+ 'eve_'+EVE_scale+'sigmoid'+'_mean.npy')
-            self.EVE_stds = np.load(index_folder + 'eve_'+EVE_scale+'sigmoid'+'_std.npy')
+            self.EVE_means = np.load(index_folder + '/eve_'+EVE_scale+'sigmoid'+'_mean.npy')
+            self.EVE_stds = np.load(index_folder + '/eve_'+EVE_scale+'sigmoid'+'_std.npy')
         
         if (not zscore):
-            self.EVE_means = np.load(index_folder+'eve_mean.npy')
-            self.EVE_stds = np.load(index_folder + 'eve_std.npy')
+            self.EVE_means = np.load(index_folder + '/eve_mean.npy')
+            self.EVE_stds = np.load(index_folder + '/eve_std.npy')
 
         self.line_indices = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,14])
-        # eve = Dataset(EVE_path, "r", format="NETCDF4")
-        # full_EVE = eve.variables['irradiance'][:][:, self.line_indices]
-        # self.EVE = full_EVE[self.index_eve,:]
-        # eve.close()
+        eve = nc.Dataset(EVE_path, "r", format="NETCDF4")
+        full_EVE = eve.variables['irradiance'][:][:, self.line_indices]
+        self.EVE = full_EVE[self.index_eve,:]
+        eve.close()
 
-        # predictionDB = Dataset( index_folder + 'EVE_linear_pred_' + split + '.nc')
-        # self.EVE_residual = predictionDB.variables['irradiance'][:] - predictionDB.variables['pred_irradiance'][:]
-        # predictionDB.close()
+        predictionDB = nc.Dataset( index_folder + 'EVE_linear_pred_' + split + '.nc')
+        self.EVE_residual = predictionDB.variables['irradiance'][:] - predictionDB.variables['pred_irradiance'][:]
+        predictionDB.close()
 
         ### AIA transform : means and stds of sqrt(AIA)
         self.AIA_transform = AIA_transform
@@ -185,7 +186,7 @@ class SW_Dataset(Dataset):
         # Benito: Replace these steps
         #        AIA_sample = np.asarray( [np.load(channel.replace('fits.',''))['x'] for channel in self.index_aia[index, :]], dtype = np.float32 ) 
         divide = 4
-        AIA_down = np.asarray([np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(loadAIAMap(index).data, (divide, divide)), axis=0) for aia_file in index], dtype = np.float64 )
+        AIA_down = np.asarray([np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(loadAIAMap(aia_file).data, (divide, divide)), axis=0) for aia_file in self.index_aia[index]], dtype = np.float64 )
         # AIA_sample = np.asarray( [np.expand_dims(np.load(channel.replace('fits.',''))['x'],axis=0) for channel in self.index_aia[index, :]], dtype = np.float32 )
         # AIA_sample = np.concatenate(AIA_sample,axis=0)
         # divide=2
