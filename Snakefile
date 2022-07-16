@@ -48,16 +48,17 @@ rule fit_linear_model:
         basepath = config["sw-irr-output_path"]
     input:
       expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"]),
-      eve_netcdf_path=config["eve_base_path"]+"/EVE_irradiance.nc"
+      eve_netcdf_path=config["sw-irr-output_path"]+"/EVE_irradiance.nc"
     output:
         linear_preds =expand(config["sw-irr-output_path"]+"/EVE_linear_pred__{split}.nc",split = config["SPLIT"]),
-        linear_stats =config["sw-irr-output_path"]+"/mean_std_feats.npz",
-        eve_resid =config["sw-irr-output_path"]+"/eve_residual_{}_14ptot.npy"
+        # linear_stats =config["sw-irr-output_path"]+"/mean_std_feats.npz",
+        # eve_resid =config["sw-irr-output_path"]+"/eve_residual_{}_14ptot.npy"
 
     shell:
         """
-        python canonical_code/fdl18_fit_linear_model.py \
-        --base {params.basepath}
+        python fdleuvai/models/fit_linear_model.py \
+        --base {params.basepath} \
+        --divide 4
         """
 
 ## Creates the normalization values based on the train set

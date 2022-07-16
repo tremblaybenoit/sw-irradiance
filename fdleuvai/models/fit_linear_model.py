@@ -51,12 +51,12 @@ def handleStd(index_aia_i):
 
 def save_prediction(eve_data, line_indices, prediction, data_root, split, debug=False):
 
-    matches = pd.read_csv(data_root+split+'.csv')
+    matches = pd.read_csv(data_root+'/'+split+'.csv')
     if debug:
         matches = matches.loc[0:4,:]
 
     # open database
-    netcdfDB = Dataset(data_root + 'EVE_linear_pred_' + split + '.nc', "w", format="NETCDF4")
+    netcdfDB = Dataset(data_root + '/EVE_linear_pred_' + split + '.nc', "w", format="NETCDF4")
     netcdfDB.title = f'{split} EVE observed and predicted spectral irradiance for specific spectral lines using a linear model'
     netcdfDB.split = split + ' set'
 
@@ -108,7 +108,7 @@ def save_prediction(eve_data, line_indices, prediction, data_root, split, debug=
 
 def getXy(eve_data, data_root, split, debug=True):
 
-    matches = pd.read_csv(data_root+split+'.csv')
+    matches = pd.read_csv(data_root+'/'+split+'.csv')
 
     if debug:
         matches = matches.loc[0:4,:]
@@ -214,7 +214,7 @@ if __name__ == "__main__":
 
     # Load nc file
     LOG.info('Loading EVE_irradiance.nc')
-    eve = Dataset(args.base + 'EVE_irradiance.nc', "r", format="NETCDF4")
+    eve = Dataset(args.base + '/EVE_irradiance.nc', "r", format="NETCDF4")
     
     eve_data = eve.variables['irradiance'][:]
     line_indices = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,14])
@@ -231,8 +231,10 @@ if __name__ == "__main__":
 
     mu, sig = getNormalize(XTr)
 
-    LOG.info('Normalization mu', mu)
-    LOG.info('Normalization sigma', sig)
+    LOG.info('Normalization mu')
+    print(mu)
+    LOG.info('Normalization sigma')
+    print(sig)
 
     XTr = addOne((XTr-mu) / sig)
     XVa = addOne((XVa-mu) / sig)
