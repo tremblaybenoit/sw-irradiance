@@ -87,10 +87,18 @@ if __name__ == "__main__":
 
     AIA_samples = process_map(handleStd, fnList, chunksize=5)
     AIA_samples = np.concatenate(AIA_samples,axis=1)
-    AIA_samples_sqrt = np.sqrt(AIA_samples)
     
-    LOG.info('Calculating mean and std for AIA files')
+    LOG.info('Clean problematic files and remove them from the training csv')
+    total_finite = np.sum(np.isfinite(AIA_samples), axis=(0,2,3))
+    valid_entries = total_finite == np.max(total_finite)
 
+    if np.sum(valid_entries) < train.shape[0]:
+        train = train.loc[valid_entries,:].reset_index(drop=True)
+        train.to_csv(args.base+"/train.csv", index=False)
+        AIA_samples = AIA_samples[:, valid_entries, : , :]
+
+    LOG.info('Calculating mean and std for AIA files')
+    AIA_samples_sqrt = np.sqrt(AIA_samples)
     AIA_m_sqrt = np.nanmean(AIA_samples_sqrt,axis=(1,2,3))
     AIA_s_sqrt = np.nanstd(AIA_samples_sqrt,axis=(1,2,3))
 

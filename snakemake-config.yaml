@@ -1,7 +1,17 @@
 
+# AIA location
+aia_path: "/mnt/miniset/aia-jsoc"
+
+# Location of FDL 2018 eve data
 eve_base_path: "/home/miraflorista/sw-irradiance/data/EVE"
-sw-irr-output_path: "/home/miraflorista/sw-irr-output"
-model_results_path: "home/miraflorista/model_results"
+
+# Path to place all calculations
+sw-irr-output_path: "/home/andres_munoz_j/sw-irr-output-clean"
+
+# Model results
+model_results_path: "home/andres_munoz_j/model_results"
+
+# Wildcards
 INSTRUMENT: ["aia","eve"]
 NORM-STATISTIC: ["mean","sqrt_mean","std","sqrt_std"]
 SPLIT: ["train","test","val"]
