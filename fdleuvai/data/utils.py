@@ -38,5 +38,5 @@ def loadAIAStack(file_paths, resolution=1024, remove_off_limb=False):
     numpy array with AIA stack
     """
 
-    return np.asarray([np.expand_dims(loadAIAMap(aia_file, resolution=resolution, remove_off_limb=remove_off_limb).data, axis=0) for aia_file in file_paths], dtype = np.float64)
+    return np.asarray([np.expand_dims(loadAIAMap(aia_file, resolution=resolution, remove_off_limb=remove_off_limb).data, axis=0) for aia_file in file_paths], dtype = np.float32)
         
