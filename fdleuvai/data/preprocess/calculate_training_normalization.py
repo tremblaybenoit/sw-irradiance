@@ -12,11 +12,11 @@ from tqdm.contrib.concurrent import process_map
 import logging
 
 
-# Add s4pi module to patch
-_S4PI_DIR = os.path.abspath(__file__).split('/')[:-5]
-_S4PI_DIR = os.path.join('/',*_S4PI_DIR)
-sys.path.append(_S4PI_DIR+'/4piuvsun/')
-from s4pi.data.preprocessing import loadAIAMap
+# Add utils module to load stacks
+_FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-4]
+_FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
+sys.path.append(_FDLEUVAI_DIR)
+from fdleuvai.data.utils import loadAIAMap
 
 # Initialize Python Logger
 logging.basicConfig(format='%(levelname)-4s '

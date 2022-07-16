@@ -6,7 +6,6 @@
 import sys, os
 import numpy as np
 import pandas as pd
-import multiprocessing
 from sklearn.linear_model import SGDRegressor
 import argparse
 from tqdm import tqdm
@@ -15,11 +14,11 @@ import logging
 from netCDF4 import Dataset
 import skimage
 
-# Add s4pi module to patch
-_S4PI_DIR = os.path.abspath(__file__).split('/')[:-4]
-_S4PI_DIR = os.path.join('/',*_S4PI_DIR)
-sys.path.append(_S4PI_DIR+'/4piuvsun/')
-from s4pi.data.preprocessing import loadAIAMap
+# Add utils module to load stacks
+_FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-3]
+_FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
+sys.path.append(_FDLEUVAI_DIR)
+from fdleuvai.data.utils import loadAIAMap
 
 
 # Initialize Python Logger
