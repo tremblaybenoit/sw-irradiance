@@ -12,7 +12,7 @@ sw-irr-output_path: "/home/andres_munoz_j/sw-irr-output-clean"
 model_results_path: "home/andres_munoz_j/model_results"
 
 # Wildcards
-INSTRUMENT: ["aia","eve"]
-NORM-STATISTIC: ["mean","sqrt_mean","std","sqrt_std"]
+EVE-NORM-STATISTIC: ["mean","std"]
+AIA-NORM-STATISTIC: ["mean","sqrt_mean","std","sqrt_std"]
 SPLIT: ["train","test","val"]
 phase: ["test"]
