@@ -51,7 +51,9 @@ rule fit_linear_model:
       eve_netcdf_path=config["eve_base_path"]+"/EVE_irradiance.nc"
     output:
         linear_preds =expand(config["sw-irr-output_path"]+"/EVE_linear_pred__{split}.nc",split = config["SPLIT"]),
-        linear_stats =config["sw-irr-output_path"]+"/mean_std_feats.npz"
+        linear_stats =config["sw-irr-output_path"]+"/mean_std_feats.npz",
+        eve_resid =config["sw-irr-output_path"]+"/eve_residual_{}_14ptot.npy"
+
     shell:
         """
         python canonical_code/fdl18_fit_linear_model.py \
@@ -77,8 +79,8 @@ rule calculate_training_normalization:
 ## train CNN
 rule train_CNN:
     input:
-        means="eve_residual_mean_14ptot.npy",
-        stds="eve_residual_std_14ptot.npy",
+        # means="eve_residual_mean_14ptot.npy",
+        # stds="eve_residual_std_14ptot.npy",
         norm_stats=expand("{path}/_{instrument}_{norm_stat}.npy",path=config["sw-irr-output_path"],instrument=config["INSTRUMENT"],norm_stat=config["NORM-STATISTIC"]),
         linear_preds =expand(config["sw-irr-output_path"]+"/EVE_linear_pred__{split}.nc",split = config["SPLIT"]),
         linear_stats =config["sw-irr-output_path"]+"/mean_std_feats.npz",
@@ -93,7 +95,7 @@ rule train_CNN:
     shell:
         """
         python fdl18_cdfg_residual_unified_train_to_tirr.py \
-        --src {wildcards.sw-irr-output_path} \
+        --src {params.data_path} \
         --data_root {params.data_path} \
         --target {params.model_results} #model results folder
          """
@@ -116,8 +118,9 @@ rule test_CNN:
         --src {configfiles} \
         --models {params.model_results} \
         --data_root {params.data_path} \
-        --target {pathteest results} \
-        --eve_root {path to eve file?} --phase {params.phase}
+        --target {params.model_results} \
+        # --eve_root {par} \
+        --phase {params.phase}
         """
 
 
