@@ -5,13 +5,10 @@
     "eve_channels": 14, 
     "aia_channels": 4,
     "in_resolution": 256,
-    "input_shape": {"channels": 4, 
-                    "width": 256, 
-                    "height": 256}, 
 
     "cuda": true, 
     "num_epochs": 1, 
-    "batch_size": 32, 
+    "batch_size": 5, 
     "dataloader_workers": 8, 
     "seed": 1, 
 
