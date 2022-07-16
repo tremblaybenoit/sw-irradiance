@@ -103,8 +103,10 @@ if __name__ == "__main__":
     AIA_m_sqrt = np.nanmean(AIA_samples_sqrt,axis=(1,2,3))
     AIA_s_sqrt = np.nanstd(AIA_samples_sqrt,axis=(1,2,3))
 
-    LOG.info('AIA_m_sqrt:', AIA_m_sqrt)
-    LOG.info('AIA_s_sqrt:', AIA_s_sqrt)
+    LOG.info('AIA_m_sqrt')
+    print(AIA_m_sqrt)
+    LOG.info('AIA_s_sqrt')
+    print(AIA_s_sqrt)
 
     np.save("%s/aia_sqrt_mean.npy" % args.base,AIA_m_sqrt)
     np.save("%s/aia_sqrt_std.npy" % args.base,AIA_s_sqrt)
@@ -112,8 +114,10 @@ if __name__ == "__main__":
     AIA_m = np.nanmean(AIA_samples,axis=(1,2,3))
     AIA_s = np.nanstd(AIA_samples,axis=(1,2,3))
 
-    LOG.info('AIA_m:', AIA_m)
-    LOG.info('AIA_s:', AIA_s)
+    LOG.info('AIA_m')
+    print(AIA_m)
+    LOG.info('AIA_s')
+    print(AIA_s)
 
     np.save("%s/aia_mean.npy" % args.base,AIA_m)
     np.save("%s/aia_std.npy" % args.base,AIA_s)
