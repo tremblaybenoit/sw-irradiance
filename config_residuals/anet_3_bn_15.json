@@ -11,9 +11,9 @@
     "batch_size": 5, 
     "dataloader_workers": 8, 
     "seed": 1, 
-
     "to_train": true, 
-    "to_test": false, 
+    "to_test": false,
+     
     "arch": "anet_3_bn", 
     "loss": "L1", 
     "dropout": true, 
