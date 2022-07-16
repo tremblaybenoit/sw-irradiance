@@ -13,7 +13,7 @@ import logging
 
 
 # Add s4pi module to patch
-_S4PI_DIR = os.path.abspath(__file__).split('/')[:-3]
+_S4PI_DIR = os.path.abspath(__file__).split('/')[:-5]
 _S4PI_DIR = os.path.join('/',*_S4PI_DIR)
 sys.path.append(_S4PI_DIR+'/4piuvsun/')
 from s4pi.data.preprocessing import loadAIAMap
