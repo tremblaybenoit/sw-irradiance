@@ -79,6 +79,7 @@ rule fit_linear_model:
 rule calculate_training_normalization:
     input:
         matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv",
+        splits = expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"])
     params:
         basepath = config["sw-irr-output_path"],
         resolution = config["RESOLUTION"],
