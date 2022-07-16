@@ -8,7 +8,15 @@ from netCDF4 import Dataset
 
 
 def create_eve_netcdf(eve_raw_path, netcdf_outpath):
+  """_summary_
 
+  Args:
+      eve_raw_path (str): path to directory of eve files
+      netcdf_outpath (str): path to output cdf file
+
+  Returns:
+      netcdf file containing EVE data and metadata
+  """
   eve_date = np.load(eve_raw_path + "/iso.npy",allow_pickle=True)
   eve_irr = np.load(eve_raw_path + "/irradiance.npy",allow_pickle=True)
   eve_jd = np.load(eve_raw_path + "/jd.npy",allow_pickle=True)
