@@ -37,6 +37,27 @@ rule generate_matches_time:
         -debug {params.debug}
         """
 
+
+## generates donwnscaled stacks of the AIA chanels
+rule generate_euv_image_stacks:
+    input:
+        matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv"
+        aia_path = config["aia_path"]
+    params:
+        stack_outpath = config["aia_stack_path"],
+        debug = config["DEBUG"]
+    output:
+        matches_output = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv"
+        #config["aia_stack_path"]+{*.npy}
+    shell:
+        """
+        python fdleuvai/data/preprocess/generate_euv_image_stacks.py \
+        -aia_path {input.aia_path} \
+        -matches {input.matches}\
+        -stack_outpath {params.stack_outpath}
+        -debug {params.debug}
+        """
+
 ## generates train, test, values datasets 
 rule make_train_val_test_sets:
     input:

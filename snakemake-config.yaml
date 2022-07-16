@@ -10,6 +10,9 @@ REMOVE_OFFLIMB: False
 # AIA location
 aia_path: "/mnt/miniset/aia-jsoc"
 
+# AIA preprocesed stack
+aia_stack_path: "/mnt/miniset/aia-stacks"
+
 # Location of FDL 2018 eve data
 eve_base_path: "/home/miraflorista/sw-irradiance/data/EVE"
 
