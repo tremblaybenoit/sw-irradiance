@@ -11,7 +11,7 @@ fitted linear model (see setup_residual_totirr.py)
 import sys
 sys.path.append('Utilities/') #add to pythonpath to get Dataset, hardcoded at the moment
 
-from SW_Dataset_bakeoff_totirr import *
+from SW_Dataset_bakeoff_totirr import SW_Dataset
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -142,6 +142,9 @@ def parse_args():
     parser.add_argument('-data_root',dest='data_root',required=True)
     parser.add_argument('-nb_channels',dest='nb_channels', default=4, type=int,
                         help='Number of SDO/AIA channels used.')
+    parser.add_argument('-resolution', dest='resolution', default=256, type=int)
+    parser.add_argument('-remove_off_limb', dest='remove_off_limb', type=bool, default=False, help='Remove Off-limb')
+    parser.add_argument('-debug', dest='debug', type=bool, default=False, help='Only process a few files')
     args = parser.parse_args()
     return args
 
@@ -150,6 +153,9 @@ if __name__ == "__main__":
 
     # Number of channels for SDO/AIA
     nb_channels = args.nb_channels
+
+    remove_off_limb = args.remove_off_limb
+    debug = args.debug
 
     #handle setup
     if not os.path.exists(args.target):
@@ -266,7 +272,8 @@ if __name__ == "__main__":
         csv_dir = data_root
         crop = cfg['crop']
         batch_size = 64
-        resolution = 256
+        resolution = args.resolution
+        remove_off_limb = args.remove_off_limb
         crop_res = 240
         flip = cfg['flip']
         zscore = cfg['zscore']
@@ -284,7 +291,7 @@ if __name__ == "__main__":
         ### Dataset & Dataloader for train and validation
         # Benito: I modified SW_Dataset
         # SW_Dataset (self, EVE_path, AIA_root, index_file, resolution, EVE_scale, EVE_sigmoid, split = 'train', AIA_transform = None, flip = False, crop = False, crop_res = None, zscore = True, self_mean_normalize=False):
-        sw_datasets = {x: SW_Dataset(EVE_path, data_root, csv_dir, resolution, cfg['eve_transform'], cfg['eve_sigmoid'], split = x, AIA_transform = aia_transform, flip=flip, crop = crop, crop_res = crop_res, zscore = zscore,self_mean_normalize=True) for x in ['train', 'val']}
+        sw_datasets = {x: SW_Dataset(EVE_path, csv_dir, resolution, cfg['eve_transform'], cfg['eve_sigmoid'], split = x, AIA_transform = aia_transform, flip=flip, zscore = zscore, remove_off_limb=remove_off_limb, self_mean_normalize=True, debug=debug) for x in ['train', 'val']}
 
         sw_dataloaders = {x: torch.utils.data.DataLoader(sw_datasets[x], batch_size = batch_size, shuffle = True, num_workers=8) for x in ['train', 'val']}
 

@@ -10,18 +10,17 @@ import torch
 import pandas as pd
 from torch.utils.data import Dataset
 import os, sys
-import math
-import pdb
-import json
 import skimage.transform
 import logging
 import netCDF4 as nc
 
-# Add s4pi module to patch
-_S4PI_DIR = os.path.abspath(__file__).split('/')[:-3]
-_S4PI_DIR = os.path.join('/',*_S4PI_DIR)
-sys.path.append(_S4PI_DIR+'/../4piuvsun/')
-from s4pi.data.preprocessing import loadAIAMap
+
+# Add utils module to load stacks
+_FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-3]
+_FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
+sys.path.append(_FDLEUVAI_DIR)
+from fdleuvai.data.utils import loadAIAStack
+
 
 # Initialize Python Logger
 logging.basicConfig(format='%(levelname)-4s '
@@ -88,14 +87,49 @@ class SW_Dataset(Dataset):
 
     ''' Dataset class to get inputs and labels for AIA-->EVE mapping'''
 
-    def __init__(self, EVE_path, AIA_root, index_folder, resolution, EVE_scale, EVE_sigmoid, split = 'train', AIA_transform = None, flip = False, crop = False, crop_res = None, zscore = True, self_mean_normalize=False):
+    def __init__(self, 
+                 EVE_path,
+                 index_folder, 
+                 resolution, 
+                 EVE_scale, 
+                 EVE_sigmoid, 
+                 split = 'train', 
+                 remove_off_limb=False, 
+                 AIA_transform = None, 
+                 flip = False, 
+                 zscore = True, 
+                 self_mean_normalize=False,
+                 debug = False):
 
         """_summary_
 
         Args:
-            EVE_path: File containing the EVE residuals.
-            AIA_root: Path to aia_mean.npy, etc.
-            index_folder: Path to train.csv, etc.
+            EVE_path: str
+                File containing the EVE residuals
+            index_folder: str 
+                Path to train.csv, etc.
+            resolution: int
+                resolution of the image used to train the NN (i.e. 256)
+            EVE_scale: ??
+                ??
+            Eve_sigmoid: ??
+                ??
+            
+        Params:
+            split: str
+                which split is being used (i.e. train)
+            remove_off_limb: bool
+                whether to remove the corona during prep
+            AIA_transform: ??
+                ??
+            flip: bool
+                Whether to augment by flipping
+            zscore: bool
+                Whether to apply scores to ????
+            self_mean_normalize: bool
+                Whether to normalize each image to itself
+            debug: bool
+                Only load a little bit of each csv            
 
         Returns:
             : 
@@ -110,14 +144,17 @@ class SW_Dataset(Dataset):
         ### do we perform random flips?
         self.flip = flip
         
+        # Remove offlimb during dataload
+        self.remove_off_limb = remove_off_limb
+
         ### load indices from csv file for the given split
         # Benito: index_folder is a path
         df_indices = pd.read_csv(index_folder+'/'+split+'.csv')
+        if debug:
+            df_indices = df_indices.loc[0:10,:]
         
-        ### resolution. normal is 224, if 256 we perform crops
+        ### resolution.
         self.resolution = resolution
-        self.crop = crop
-        self.crop_res = crop_res
         
         self.self_mean_normalize = self_mean_normalize
         
@@ -164,12 +201,6 @@ class SW_Dataset(Dataset):
         #data length
         if (len(self.index_eve) != len(self.index_aia)):
             raise ValueError('Time length of EVE and AIA are different')
-            
-        #crop arguments
-        if (self.crop and self.crop_res == None):
-            raise ValueError('If crops are on, please specify a crop resolution')
-        if (self.crop and self.crop_res > self.resolution):
-            raise ValueError('Cropping resolution must be smaller than initial resolution')
         
         print('Loaded ' + split + ' Dataset with ' + str(len(self.index_eve))+' examples' )
 
@@ -181,31 +212,12 @@ class SW_Dataset(Dataset):
         return len(self.index_eve)
 
     def __getitem__(self, index):
-        ### Training in paper is 256 but now data is 512 so we downsample.
 
-        # Benito: Replace these steps
-        #        AIA_sample = np.asarray( [np.load(channel.replace('fits.',''))['x'] for channel in self.index_aia[index, :]], dtype = np.float32 ) 
-        divide = 4
-        AIA_down = np.asarray([np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(loadAIAMap(aia_file).data, (divide, divide)), axis=0) for aia_file in self.index_aia[index]], dtype = np.float64 )
-        # AIA_sample = np.asarray( [np.expand_dims(np.load(channel.replace('fits.',''))['x'],axis=0) for channel in self.index_aia[index, :]], dtype = np.float32 )
-        # AIA_sample = np.concatenate(AIA_sample,axis=0)
-        # divide=2
-        # AIA_down = np.asarray( ( [np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(AIA_sample[i,:,:], (divide, divide)), axis=0) for i in range(AIA_sample.shape[0])]), dtype=np.float32 )
+        AIA_down = loadAIAStack(self.index_aia[index], resolution=self.resolution, remove_off_limb=self.remove_off_limb)
         AIA_sample = np.concatenate(AIA_down, axis = 0)
  
         if self.self_mean_normalize:
             AIA_sample = AIA_sample - np.mean(AIA_sample,axis=(1,2),keepdims=True)
-        
-        ### if resolution is above 224, we perform random crops
-        if (self.crop):
-            hcrop_start = np.random.randint(0, high = (self.resolution - self.crop_res) + 1)
-            hcrop_end = hcrop_start + self.crop_res
-            
-            vcrop_start = np.random.randint(0, high = (self.resolution - self.crop_res) + 1)
-            vcrop_end = vcrop_start + self.crop_res
-            
-            AIA_sample = AIA_sample[:,vcrop_start : vcrop_end, hcrop_start : hcrop_end]
-            
 
         ### random flips
         if (self.flip):
