@@ -34,7 +34,7 @@ rule generate_matches_time:
         -eve_path {input.eve_netcdf_path} \
         -aia_path {input.aia_path} \
         -out_path {params.match_outpath}\
-        --debug {params.debug}
+        -debug {params.debug}
         """
 
 ## generates train, test, values datasets 
@@ -44,7 +44,7 @@ rule make_train_val_test_sets:
     output:
         expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"])
     shell:
-        "python fdleuvai/data/preprocess/make_train_val_test_sets.py --src {input.matches} --splits rve"
+        "python fdleuvai/data/preprocess/make_train_val_test_sets.py -src {input.matches} -splits rve"
         
 
 #########################################################################################################
@@ -69,10 +69,10 @@ rule fit_linear_model:
     shell:
         """
         python fdleuvai/models/fit_linear_model.py \
-        --base {params.basepath} \
-        --resolution {params.resolution}\
-        --remove_off_limb {params.remove_off_limb}\
-        --debug {params.debug}
+        -base {params.basepath} \
+        -resolution {params.resolution}\
+        -remove_off_limb {params.remove_off_limb}\
+        -debug {params.debug}
         """
 
 ## Creates the normalization values based on the train set
@@ -90,10 +90,10 @@ rule calculate_training_normalization:
     shell:
         """
         python fdleuvai/data/preprocess/calculate_training_normalization.py \
-        --base {params.basepath} \
-        --resolution {params.resolution}\
-        --remove_off_limb {params.remove_off_limb}\
-        --debug {params.debug}
+        -base {params.basepath} \
+        -resolution {params.resolution}\
+        -remove_off_limb {params.remove_off_limb}\
+        -debug {params.debug}
         """
 
 ## train CNN
@@ -115,9 +115,9 @@ rule train_CNN:
     shell:
         """
         python fdl18_cdfg_residual_unified_train_to_tirr.py \
-        --src {params.data_path} \
-        --data_root {params.data_path} \
-        --target {params.model_results} #model results folder
+        -src {params.data_path} \
+        -data_root {params.data_path} \
+        -target {params.model_results} #model results folder
          """
 
 ## test data
@@ -135,12 +135,12 @@ rule test_CNN:
     shell:
         """
         python fdl18_cdfg_residual_unified_test_to_tirr.py  \
-        --src {configfiles} \
-        --models {params.model_results} \
-        --data_root {params.data_path} \
-        --target {params.model_results} \
-        # --eve_root {par} \
-        --phase {params.phase}
+        -src {configfiles} \
+        -models {params.model_results} \
+        -data_root {params.data_path} \
+        -target {params.model_results} \
+        # -eve_root {par} \
+        -phase {params.phase}
         """
 
 
