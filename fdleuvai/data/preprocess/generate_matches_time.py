@@ -14,10 +14,11 @@ def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve
 
     Args:
         aia_path (str): path to directory of aia files
-        eve_path (str): path to json file
+        eve_path (str): path to cdf file
         output_path (str): path to store output csv file
         wavelengths: list of wavelengths that are needed
-        cutoff_seconds(int): cutoff for time delta (difference between AIA and EVE file in time) in seconds
+        cutoff_eve(int): cutoff for time delta (difference between AIA and EVE file in time) in seconds
+        cutoff_aia(int): cutoff for time delta (difference between AIA images in different wavelengths) in seconds
         debug (bool): Only do 10 AIA matches 
 
     Returns:
@@ -45,7 +46,6 @@ def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve
     eve_res = []
     eve_times = []
     aia_res = [[] for i in range(nb_wavelengths)]
-    # aia_selections = [[] for i in range(nb_wavelengths)]
     threshold_eve = datetime.timedelta(seconds=cutoff_eve) #cutoff time for time match
     threshold_aia = datetime.timedelta(seconds=cutoff_aia)
     pbar_finding_matches = tqdm(aia_iso_dates[0])
@@ -55,7 +55,6 @@ def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve
         eve_ans = min(eve_dates, key=lambda sub: abs(sub - aia_date))
         aia_ans = [min(aia_iso_dates[i], key=lambda sub: abs(sub - aia_date)) for i in range(nb_wavelengths)]
         if abs(eve_ans - aia_date) <= threshold_eve and np.amax([abs(aia_ans[i] - aia_date) for i in range(nb_wavelengths)]) <= threshold_aia:
-            # print(aia_date, ans_193, ans_211, ans_304)
             eve_times += abs(eve_ans - aia_date),
             eve_res+= eve_ans,
             for i in range(nb_wavelengths):
