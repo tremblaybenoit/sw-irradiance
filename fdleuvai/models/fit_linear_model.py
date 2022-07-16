@@ -231,6 +231,9 @@ if __name__ == "__main__":
 
     mu, sig = getNormalize(XTr)
 
+    LOG.info('Normalization mu', mu)
+    LOG.info('Normalization sigma', sig)
+
     XTr = addOne((XTr-mu) / sig)
     XVa = addOne((XVa-mu) / sig)
     XTe = addOne((XTe-mu) / sig)
