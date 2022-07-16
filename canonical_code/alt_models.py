@@ -152,9 +152,9 @@ class DeepMLP(nn.Module):
         return x
 
 class ChoppedAlexnetBN(nn.Module):
-    def getLayers(self, numLayers):
+    def getLayers(self, numLayers, n_channels):
         """Returns a list of layers + the feature size coming out"""
-        layers = [nn.Conv2d(9, 64, kernel_size=11, stride=4, padding=2), nn.BatchNorm2d(64), nn.ReLU(inplace=True), ]
+        layers = [nn.Conv2d(n_channels, 64, kernel_size=11, stride=4, padding=2), nn.BatchNorm2d(64), nn.ReLU(inplace=True), ]
         if numLayers == 1:
             return (layers, 64)
         layers += [nn.MaxPool2d(kernel_size=3, stride=2), nn.Conv2d(64, 192, kernel_size=5, padding=2), nn.BatchNorm2d(192), nn.ReLU(inplace=True), ]
@@ -167,9 +167,9 @@ class ChoppedAlexnetBN(nn.Module):
         layers += [nn.Conv2d(384, 256, kernel_size=3, padding=1), nn.ReLU(inplace=True), nn.BatchNorm2d(256)]
         return (layers,256)
         
-    def __init__(self, numLayers, outSize, dropout):
+    def __init__(self, numLayers, n_channels, outSize, dropout):
         super(ChoppedAlexnetBN, self).__init__()
-        layers, channelSize = self.getLayers(numLayers)
+        layers, channelSize = self.getLayers(numLayers, n_channels)
         self.features = nn.Sequential(*layers)
         self.pool = nn.AdaptiveAvgPool2d((1,1))
         if (dropout):
