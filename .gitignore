@@ -6,3 +6,4 @@ data/EVE/raw/*.npy
 *.csv
 *.pyc
 __pycache__/
+wandb/
