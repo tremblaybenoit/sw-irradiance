@@ -16,19 +16,23 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
-import torchvision
 from torchvision import models,transforms
 import numpy as np
 import time
-import asyncio
 import copy
 import argparse
 import json
-import pdb
 import alt_models
 import random
+import os, sys
 
-import os
+# Add utils module to load stacks
+_FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-2]
+_FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
+sys.path.append(_FDLEUVAI_DIR)
+
+from fdleuvai.data.utils import str2bool
+
 ### just to helper to create net directories in results/
 def createFolder(directory):
     try:
@@ -144,7 +148,7 @@ def parse_args():
                         help='Number of SDO/AIA channels used.')
     parser.add_argument('-resolution', dest='resolution', default=256, type=int)
     parser.add_argument('-remove_off_limb', dest='remove_off_limb', type=bool, default=False, help='Remove Off-limb')
-    parser.add_argument('-debug', dest='debug', type=bool, default=False, help='Only process a few files')
+    parser.add_argument('-debug', dest='debug', type=str2bool, default=False, help='Only process a few files')
     args = parser.parse_args()
     return args
 
@@ -196,8 +200,8 @@ if __name__ == "__main__":
         # logFile = "%s/%s_log.txt" % (targetBase, cfgName)
 
         print(modelFile)
-        # if os.path.exists(modelFile) or isLocked(modelFile+".lock"):
-        #     continue
+        if os.path.exists(modelFile) or isLocked(modelFile+".lock"):
+            continue
         
         sw_net = None
         
