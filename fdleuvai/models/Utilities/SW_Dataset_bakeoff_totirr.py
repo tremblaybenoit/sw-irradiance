@@ -16,7 +16,7 @@ import netCDF4 as nc
 
 
 # Add utils module to load stacks
-_FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-3]
+_FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-4]
 _FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
 sys.path.append(_FDLEUVAI_DIR)
 from fdleuvai.data.utils import loadAIAStack
