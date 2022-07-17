@@ -161,7 +161,11 @@ class SW_Dataset(Dataset):
         ### all AIA channels. first two columns are junk
         # Benito: Is that the case for us?
         aia_columns = [col for col in df_indices.columns if 'AIA' in col]
-        self.index_aia = df_indices[aia_columns].values.tolist()
+
+        if 'aia_stack' in df_indices.columns:
+            self.index_aia = df_indices['aia_stack'].values.tolist()
+        else:
+            self.index_aia = df_indices[aia_columns].values.tolist()
 
         ### last column is EVE index
         self.index_eve = np.asarray(df_indices["eve_indices"]).astype(int)
@@ -213,7 +217,11 @@ class SW_Dataset(Dataset):
 
     def __getitem__(self, index):
 
-        AIA_down = loadAIAStack(self.index_aia[index], resolution=self.resolution, remove_off_limb=self.remove_off_limb, off_limb_val=0, remove_nans=True)
+        if type(self.index_aia[index])==list:
+            AIA_down = loadAIAStack(self.index_aia[index], resolution=self.resolution, remove_off_limb=self.remove_off_limb, off_limb_val=0, remove_nans=True)
+        else:
+            AIA_down = np.load(self.index_aia[index])
+
         AIA_sample = np.concatenate(AIA_down, axis = 0)
  
         if self.self_mean_normalize:
