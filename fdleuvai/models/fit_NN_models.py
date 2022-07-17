@@ -26,6 +26,9 @@ import alt_models
 import random
 import os, sys
 
+import wandb
+wandb.login()
+
 # Add utils module to load stacks
 _FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-2]
 _FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
@@ -109,8 +112,10 @@ def train_model(model, dataloaders, device, criterion, optimizer, scheduler, num
             print('%s loss = %f' %(phase, epoch_loss))
             if phase == 'train':
                 train_loss_list.append(epoch_loss)
+                wandb.log({"Train Loss": epoch_loss})
             else : 
                 val_loss_list.append(epoch_loss)
+                wandb.log({"Val Loss": epoch_loss})
 
             ### take first loss as reference at first epoch
             if phase == 'val' and epoch == 0:
@@ -120,8 +125,6 @@ def train_model(model, dataloaders, device, criterion, optimizer, scheduler, num
             if phase == 'val' and epoch_loss < worst_loss:
                 best_weights = copy.deepcopy(model.state_dict())
                 worst_loss = epoch_loss
-
-
 
     ### load best weights into model
     model.load_state_dict(best_weights)
@@ -153,9 +156,9 @@ def parse_args():
     return args
 
 if __name__ == "__main__":
+
+
     args = parse_args() 
-
-
     debug = args.debug
     remove_off_limb = args.remove_off_limb
     data_root = args.data_root
@@ -174,6 +177,12 @@ if __name__ == "__main__":
     for cfgi,cfgPath in enumerate(cfgs):
 
         cfg = json.load(open("%s/%s" % (args.src,cfgPath)))
+
+        wandb.init(
+            entity='4pi-euv',
+            project='fdl-2018-week5', 
+            config=cfg
+        )        
 
         n_channels = cfg['aia_channels']
         batch_size = cfg['batch_size']
@@ -298,6 +307,7 @@ if __name__ == "__main__":
         exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=stepSize, gamma=0.1)
 
 
+        wandb.watch(sw_net, log="all")
         print(sw_net)
         print(optimizer)
 
@@ -307,6 +317,9 @@ if __name__ == "__main__":
 
         ### save net, losses and info in corresponding net directory
         torch.save(sw_net, modelFile)
+
+        torch.save(sw_net.state_dict(), "model.h5")
+        wandb.save('model.h5')
 
         np.save("%s/train_loss.npy" % targetBase, train_loss)
         np.save("%s/val_loss.npy" % targetBase, val_loss)
