@@ -54,7 +54,7 @@ def test_model(model, dataloader):
     for batchI,inputs in enumerate(dataloader):
         if batchI % 20 == 0:
             print("%06d/%06d" % (batchI,len(dataloader)))
-        inputs = inputs.cuda(async = True)
+        inputs = inputs.cuda(non_blocking=True)
         output = model(inputs)
         output = output.cpu().detach().numpy()
         outputs.append(output)
@@ -98,6 +98,11 @@ def parse_args():
     parser.add_argument('-target',dest='target',required=True)
     parser.add_argument('-data_root',dest='data_root',required=True)
     parser.add_argument('-phase',dest='phase',default='test')
+    parser.add_argument('-n_channels',dest='n_channels', default=4, type=int,
+                        help='Number of SDO/AIA channels used.')
+    parser.add_argument('-resolution', dest='resolution', default=256, type=int)
+    parser.add_argument('-remove_off_limb', dest='remove_off_limb', type=bool, default=False, help='Remove Off-limb')
+    parser.add_argument('-debug', dest='debug', type=str2bool, default=False, help='Only process a few files')
     args = parser.parse_args()
     return args
 
@@ -167,7 +172,7 @@ if __name__ == "__main__":
             
         ### Dataset & Dataloader for inference
 
-        sw_datasets = {x: SW_Dataset(data_root, data_root, data_root, resolution, cfg['eve_transform'], cfg['eve_sigmoid'], split = x, AIA_transform = aia_transform, crop = crop, flip = flip, crop_res = crop_res, zscore = zscore,self_mean_normalize=True) for x in [phase]}
+        sw_datasets = {x: SW_Dataset(data_root, data_root, data_root, resolution, cfg['eve_transform'], cfg['eve_sigmoid'], split = x, AIA_transform = aia_transform, crop = crop, flip = flip, crop_res = crop_res, zscore = zscore, remove_off_limb=remove_off_limb, self_mean_normalize=True, debug=debug) for x in [phase]}
         sw_dataloaders = {x: torch.utils.data.DataLoader(sw_datasets[x], batch_size = batch_size, shuffle = False, num_workers=8) for x in [phase]}
         dataset_sizes = {x: len(sw_datasets[x]) for x in [phase]}
 

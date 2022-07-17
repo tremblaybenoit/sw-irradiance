@@ -11,10 +11,26 @@ import numpy as np
 import torch
 import pandas as pd
 from torch.utils.data import Dataset
-import sys
+import os, sys
 import math
-import pdb
-import skimage.transform
+import logging
+import netCDF4 as nc
+
+# Add utils module to load stacks
+_FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-3]
+_FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
+sys.path.append(_FDLEUVAI_DIR)
+from fdleuvai.data.utils import loadAIAStack
+
+
+# Initialize Python Logger
+logging.basicConfig(format='%(levelname)-4s '
+                           '[%(module)s:%(funcName)s:%(lineno)d]'
+                           ' %(message)s')
+
+LOG = logging.getLogger()
+LOG.setLevel(logging.INFO)
+
 
 def aia_scale(aia_sample, zscore = True, self_mean_normalize=False):
     if not self_mean_normalize:
@@ -73,7 +89,20 @@ class SW_Dataset(Dataset):
 
     ''' Dataset class to get inputs and labels for AIA-->EVE mapping'''
 
-    def __init__(self, EVE_path, AIA_root, index_file, resolution, EVE_scale, EVE_sigmoid, split = 'train', AIA_transform = None, flip = False, crop = False, crop_res = None, zscore = True, self_mean_normalize=False):
+    def __init__(self, 
+                EVE_path, 
+                AIA_root, 
+                index_file, 
+                resolution, 
+                EVE_scale, 
+                EVE_sigmoid, 
+                split = 'train',
+                remove_off_limb=False, 
+                AIA_transform = None, 
+                flip = False, 
+                zscore = True, 
+                self_mean_normalize=False,
+                debug = False):
 
         ''' Input path for aia and eve index files, as well as data path for EVE.
             We load EVE during init, but load AIA images on the fly'''
@@ -83,18 +112,26 @@ class SW_Dataset(Dataset):
         
         ### do we perform random flips?
         self.flip = flip
+
+        # Remove offlimb during dataload
+        self.remove_off_limb = remove_off_limb
         
-        df_indices = pd.read_csv(index_file+'index.csv')
+        df_indices = pd.read_csv(index_folder+'/'+split+'.csv')
+        if debug:
+            df_indices = df_indices.loc[0:10,:]
         
         ### resolution. normal is 224, if 256 we perform crops
         self.resolution = resolution
-        self.crop = crop
-        self.crop_res = crop_res
         
         self.self_mean_normalize = self_mean_normalize
         
 
-        self.index_aia = AIA_root + np.asarray(df_indices[[channel for channel in df_indices.columns[1:-1]]])
+        aia_columns = [col for col in df_indices.columns if 'AIA' in col]
+
+        if 'aia_stack' in df_indices.columns:
+            self.index_aia = df_indices['aia_stack'].values.tolist()
+        else:
+            self.index_aia = df_indices[aia_columns].values.tolist()
 
         ### AIA transform : means and stds of sqrt(AIA)
         self.AIA_transform = AIA_transform
@@ -116,24 +153,15 @@ class SW_Dataset(Dataset):
     def __getitem__(self, index):
 
         ### Training in paper is done on 256 images but new data is 512 so we downsample here.
-        AIA_sample = np.asarray( [np.expand_dims(np.load(channel.replace('fits.',''))['x'],axis=0) for channel in self.index_aia[index, :]], dtype = np.float32 )
-        AIA_sample = np.concatenate(AIA_sample,axis=0)
-        divide=2
-        AIA_down = np.asarray( ( [np.expand_dims(divide*divide*skimage.transform.downscale_local_mean(AIA_sample[i,:,:], (divide, divide)), axis=0) for i in range(AIA_sample.shape[0])]), dtype=np.float32 )
+        if type(self.index_aia[index])==list:
+            AIA_down = loadAIAStack(self.index_aia[index], resolution=self.resolution, remove_off_limb=self.remove_off_limb, off_limb_val=0, remove_nans=True)
+        else:
+            AIA_down = np.load(self.index_aia[index])
+
         AIA_sample = np.concatenate(AIA_down, axis = 0)
+
         if self.self_mean_normalize:
             AIA_sample = AIA_sample - np.mean(AIA_sample,axis=(1,2),keepdims=True)
-        
-        ### if resolution is above 224, we perform random crops
-        if (self.crop):
-            hcrop_start = np.random.randint(0, high = (self.resolution - self.crop_res) + 1)
-            hcrop_end = hcrop_start + self.crop_res
-            
-            vcrop_start = np.random.randint(0, high = (self.resolution - self.crop_res) + 1)
-            vcrop_end = vcrop_start + self.crop_res
-            
-            AIA_sample = AIA_sample[:,vcrop_start : vcrop_end, hcrop_start : hcrop_end]
-            
 
         ### random flips
         if (self.flip):
