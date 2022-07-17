@@ -15,7 +15,7 @@ import logging
 _FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-4]
 _FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
 sys.path.append(_FDLEUVAI_DIR)
-from fdleuvai.data.utils import loadAIAStack
+from fdleuvai.data.utils import loadAIAStack, str2bool
 
 # Initialize Python Logger
 logging.basicConfig(format='%(levelname)-4s '
@@ -29,13 +29,16 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-base',dest='base',required=True)
     parser.add_argument('-remove_off_limb', dest='remove_off_limb', type=bool, default=False, help='Remove Off-limb')
-    parser.add_argument('-debug', dest='debug', type=bool, default=False, help='Only process a few files')
+    parser.add_argument('-debug', dest='debug', type=str2bool, default=False, help='Only process a few files')
     parser.add_argument('-resolution', dest='resolution', default=256, type=int)
     args = parser.parse_args()
     return args
 
-def handleStd(index_aia_i):
+def make_stack(index_aia_i):
     return loadAIAStack(index_aia_i, resolution=resolution, remove_off_limb=remove_off_limb, off_limb_val=0, remove_nans=True)
+
+def load_stack(aia_file):
+    return np.load(aia_file)    
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -81,15 +84,20 @@ if __name__ == "__main__":
     aia_columns = [col for col in train.columns if 'AIA' in col]
 
     fnList = []
-    for index, row in tqdm(train.iterrows()):
-        fnList.append(row[aia_columns].tolist())
-
+    
     LOG.info('Processing AIA files')
+    if 'aia_stack' in train.columns:
+        for index, row in tqdm(train.iterrows()):
+            fnList.append(row['aia_stack'])
+        AIA_samples = process_map(load_stack, fnList, chunksize=5)
 
-    AIA_samples = process_map(handleStd, fnList, chunksize=5)
+    else:    
+        for index, row in tqdm(train.iterrows()):
+            fnList.append(row[aia_columns].tolist())
+        AIA_samples = process_map(make_stack, fnList, chunksize=5)
+
     AIA_samples = np.concatenate(AIA_samples,axis=1)
     
-
     total_finite = np.sum(np.isfinite(AIA_samples), axis=(0,2,3))
     valid_entries = total_finite == np.max(total_finite)
 

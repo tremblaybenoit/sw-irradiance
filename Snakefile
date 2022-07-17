@@ -49,7 +49,6 @@ rule generate_euv_image_stacks:
         debug = config["DEBUG"]
     output:
         matches_output = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304_stacks.csv"
-        #config["aia_stack_path"]+{*.npy}
     shell:
         """
         python fdleuvai/data/preprocess/generate_euv_image_stacks.py \
@@ -128,8 +127,10 @@ rule train_CNN:
         # means="eve_residual_mean_14ptot.npy",
         # stds="eve_residual_std_14ptot.npy",
         # norm_stats=expand("{path}/_{instrument}_{norm_stat}.npy",path=config["sw-irr-output_path"],instrument=config["INSTRUMENT"],norm_stat=config["NORM-STATISTIC"]),
-        linear_preds =expand(config["sw-irr-output_path"]+"/EVE_linear_pred__{split}.nc",split = config["SPLIT"]),
-        linear_stats =config["sw-irr-output_path"]+"/mean_std_feats.npz",
+        eve_netcdf_path = config["sw-irr-output_path"]+"/EVE_irradiance.nc",
+        splits = expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"]),
+        linear_preds =expand(config["sw-irr-output_path"]+"/EVE_linear_pred_{split}.nc",split = config["SPLIT"]),
+        # linear_stats =config["sw-irr-output_path"]+"/mean_std_feats.npz",
     output:
         model = expand(config["sw-irr-output_path"]+"/EVE_linear_pred__{split}_model.pt",split = config["SPLIT"]),
         log = expand(config["sw-irr-output_path"]+"/EVE_linear_pred__{split}_log.txt",split = config["SPLIT"]),

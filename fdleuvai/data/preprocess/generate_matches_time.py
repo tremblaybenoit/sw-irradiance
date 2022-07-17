@@ -1,12 +1,19 @@
 import numpy as np
 import pandas as pd
-import os
+import os, sys
 import dateutil.parser as dt
 from tqdm import tqdm
 import glob
 from netCDF4 import Dataset
 import datetime
 import argparse
+
+
+# Add utils module to load stacks
+_FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-4]
+_FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
+sys.path.append(_FDLEUVAI_DIR)
+from fdleuvai.data.utils import str2bool
 
 
 def generate_time_matches(aia_path,eve_path,output_path, wavelengths, cutoff_eve = 10, cutoff_aia = 10*60, debug=True):
@@ -98,7 +105,7 @@ if __name__ == "__main__":
                    help='cutoff_eve')
     p.add_argument('-cutoff_aia', type=float, default=600,
                    help='cutoff_aia')
-    p.add_argument('-debug', dest='debug', type=bool, default=False, help='Only process a few files')
+    p.add_argument('-debug', dest='debug', type=str2bool, default=False, help='Only process a few files')
     args = p.parse_args()
 
     eve_path = args.eve_path

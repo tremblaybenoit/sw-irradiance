@@ -44,3 +44,25 @@ def loadAIAStack(file_paths, resolution=1024, remove_off_limb=False, off_limb_va
         aia_stack[np.isnan(aia_stack)] = 0
 
     return aia_stack
+
+
+def str2bool(v):
+    """converts string to boolean
+
+        arguments
+        ----------
+        v: string
+            string to convert to boolean
+
+        Returns
+        -------
+        a boolean value based on the string placed
+    """    
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')

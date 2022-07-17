@@ -1,5 +1,5 @@
 # debug flag this runs pipeline with only 10 files
-DEBUG: True
+DEBUG: 0
 
 # AIA resolution to use
 RESOLUTION: 256

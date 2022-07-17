@@ -13,7 +13,7 @@ from os.path import exists
 _FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-4]
 _FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
 sys.path.append(_FDLEUVAI_DIR)
-from fdleuvai.data.utils import loadAIAStack
+from fdleuvai.data.utils import loadAIAStack, str2bool
 
 # Initialize Python Logger
 logging.basicConfig(format='%(levelname)-4s '
@@ -55,7 +55,7 @@ def parse_args():
                    help='matches')
     p.add_argument('-stack_outpath', dest='stack_outpath', type=str, default="/mnt/miniset/aia-stacks",
                    help='out_path')
-    p.add_argument('-debug', dest='debug', type=bool, default=False, help='Only process a few files')
+    p.add_argument('-debug', dest='debug', type=str2bool, default=False, help='Only process a few files')
     p.add_argument('-resolution', dest='resolution', type=int, default=256, help='Resolution of the output images')
     p.add_argument('-remove_off_limb', dest='remove_off_limb', type=bool, default=False, help='Remove Off-limb')
     args = p.parse_args()

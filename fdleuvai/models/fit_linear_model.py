@@ -17,7 +17,7 @@ from netCDF4 import Dataset
 _FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-3]
 _FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
 sys.path.append(_FDLEUVAI_DIR)
-from fdleuvai.data.utils import loadAIAStack
+from fdleuvai.data.utils import loadAIAStack, str2bool
 
 
 # Initialize Python Logger
@@ -38,12 +38,20 @@ def getEVEInd(data_root,split):
     return yind, xind
 
 
-def handleStd(index_aia_i):
+def make_stack(index_aia_i):
 
     AIA_sample = loadAIAStack(index_aia_i, resolution=resolution, remove_off_limb=remove_off_limb, off_limb_val=0, remove_nans=True)
     X = np.nanmean(AIA_sample,axis=(1,2,3))
     X = np.concatenate([X,np.nanstd(AIA_sample,axis=(1,2,3))],axis=0)
     return np.expand_dims(X,axis=0)
+
+
+def load_stack(aia_file):
+    AIA_sample = np.load(aia_file)
+    X = np.nanmean(AIA_sample,axis=(1,2,3))
+    X = np.concatenate([X,np.nanstd(AIA_sample,axis=(1,2,3))],axis=0)
+    return np.expand_dims(X,axis=0)    
+
 
 def save_prediction(eve_data, line_indices, prediction, data_root, split, debug=False):
 
@@ -101,7 +109,6 @@ def save_prediction(eve_data, line_indices, prediction, data_root, split, debug=
     netcdfDB.close()
 
 
-
 def getXy(eve_data, data_root, split, debug=True):
 
     matches = pd.read_csv(data_root+'/'+split+'.csv')
@@ -115,13 +122,18 @@ def getXy(eve_data, data_root, split, debug=True):
     fnList = []
 
     aia_columns = [col for col in matches.columns if 'AIA' in col]
-    
-    for index, row in tqdm(matches.iterrows()):
-        fnList.append(row[aia_columns].tolist())
 
     LOG.info('Start process map')
+    if 'aia_stack' in matches.columns:
+        for index, row in tqdm(matches.iterrows()):
+            fnList.append(row['aia_stack'])
+        Xs = process_map(load_stack, fnList, chunksize=5)
 
-    Xs = process_map(handleStd, fnList, chunksize=5)
+    else:    
+        for index, row in tqdm(matches.iterrows()):
+            fnList.append(row[aia_columns].tolist())
+        Xs = process_map(make_stack, fnList, chunksize=5)
+
     X = np.concatenate(Xs,axis=0)
 
     total_finite = np.sum(np.isfinite(X), axis=1)
@@ -198,7 +210,7 @@ def getNormalize(XTr):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-base',dest='base',required=True)
-    parser.add_argument('-debug', dest='debug', type=bool, default=False, help='Only process a few files')
+    parser.add_argument('-debug', dest='debug', type=str2bool, default=False, help='Only process a few files')
     parser.add_argument('-resolution', dest='resolution', default=256, type=int)
     parser.add_argument('-remove_off_limb', dest='remove_off_limb', type=bool, default=False, help='Whether to remove offlimb during preprocess')    
 
@@ -213,7 +225,7 @@ if __name__ == "__main__":
     global resolution
     resolution = args.resolution
     global remove_off_limb
-    remove_off_limb = args.remove_off_limb    
+    remove_off_limb = args.remove_off_limb  
 
     # Load nc file
     LOG.info('Loading EVE_irradiance.nc')
