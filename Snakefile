@@ -37,31 +37,34 @@ rule generate_matches_time:
         -debug {params.debug}
         """
 
-
 ## generates donwnscaled stacks of the AIA chanels
 rule generate_euv_image_stacks:
     input:
-        matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv"
+        matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv",
         aia_path = config["aia_path"]
     params:
         stack_outpath = config["aia_stack_path"],
+        resolution = config["RESOLUTION"],
+        remove_off_limb = config["REMOVE_OFFLIMB"],
         debug = config["DEBUG"]
     output:
-        matches_output = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv"
+        matches_output = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304_stacks.csv"
         #config["aia_stack_path"]+{*.npy}
     shell:
         """
         python fdleuvai/data/preprocess/generate_euv_image_stacks.py \
         -aia_path {input.aia_path} \
         -matches {input.matches}\
-        -stack_outpath {params.stack_outpath}
+        -stack_outpath {params.stack_outpath}\
+        -resolution {params.resolution}\
+        -remove_off_limb {params.remove_off_limb}\
         -debug {params.debug}
         """
 
 ## generates train, test, values datasets 
 rule make_train_val_test_sets:
     input:
-        matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv"
+        matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304_stacks.csv"
     output:
         expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"])
     shell:
@@ -99,9 +102,9 @@ rule fit_linear_model:
 ## Creates the normalization values based on the train set
 rule calculate_training_normalization:
     input:
-        matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv",
-        expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"]),
-        eve_netcdf_path=config["sw-irr-output_path"]+"/EVE_irradiance.nc"
+        matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304_stacks.csv",
+        splits = expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"]),
+        eve_netcdf_path = config["sw-irr-output_path"]+"/EVE_irradiance.nc"
     params:
         basepath = config["sw-irr-output_path"],
         resolution = config["RESOLUTION"],

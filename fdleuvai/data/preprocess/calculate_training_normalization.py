@@ -6,7 +6,6 @@ import argparse
 import pandas as pd
 from netCDF4 import Dataset
 import sys, os
-import skimage
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 import logging

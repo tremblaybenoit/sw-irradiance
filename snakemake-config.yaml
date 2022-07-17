@@ -7,6 +7,9 @@ RESOLUTION: 256
 # Whether to remove off limb or on not
 REMOVE_OFFLIMB: False
 
+# Value for the offlimb
+VALUE_OFFLIMB: 0
+
 # AIA location
 aia_path: "/mnt/miniset/aia-jsoc"
 
