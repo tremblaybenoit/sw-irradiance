@@ -34,7 +34,7 @@ def handleStd(index_aia_i):
     if exists(stack_outpath+'/aia_'+filename):
         LOG.info(f'{filename} exists.')
     else:
-        aia_stack = loadAIAStack(index_aia_i, resolution=resolution, remove_off_limb=remove_off_limb)
+        aia_stack = loadAIAStack(index_aia_i, resolution=resolution, remove_off_limb=remove_off_limb, off_limb_val=0, remove_nans=True)
         # Save stack
         np.save(stack_outpath+'/aia_'+filename, aia_stack)
 

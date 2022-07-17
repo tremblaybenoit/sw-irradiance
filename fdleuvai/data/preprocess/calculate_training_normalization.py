@@ -35,7 +35,7 @@ def parse_args():
     return args
 
 def handleStd(index_aia_i):
-    return loadAIAStack(index_aia_i, resolution=resolution, remove_off_limb=remove_off_limb)
+    return loadAIAStack(index_aia_i, resolution=resolution, remove_off_limb=remove_off_limb, off_limb_val=0, remove_nans=True)
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))

@@ -40,7 +40,7 @@ def getEVEInd(data_root,split):
 
 def handleStd(index_aia_i):
 
-    AIA_sample = loadAIAStack(index_aia_i, resolution=resolution, remove_off_limb=remove_off_limb)
+    AIA_sample = loadAIAStack(index_aia_i, resolution=resolution, remove_off_limb=remove_off_limb, off_limb_val=0, remove_nans=True)
     X = np.nanmean(AIA_sample,axis=(1,2,3))
     X = np.concatenate([X,np.nanstd(AIA_sample,axis=(1,2,3))],axis=0)
     return np.expand_dims(X,axis=0)

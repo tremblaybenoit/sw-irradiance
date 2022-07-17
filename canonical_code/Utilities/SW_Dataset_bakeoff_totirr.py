@@ -213,7 +213,7 @@ class SW_Dataset(Dataset):
 
     def __getitem__(self, index):
 
-        AIA_down = loadAIAStack(self.index_aia[index], resolution=self.resolution, remove_off_limb=self.remove_off_limb)
+        AIA_down = loadAIAStack(self.index_aia[index], resolution=self.resolution, remove_off_limb=self.remove_off_limb, off_limb_val=0, remove_nans=True)
         AIA_sample = np.concatenate(AIA_down, axis = 0)
  
         if self.self_mean_normalize:
