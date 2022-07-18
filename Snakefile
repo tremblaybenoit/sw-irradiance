@@ -98,7 +98,7 @@ rule fit_linear_model:
         """
         python fdleuvai/models/fit_linear_model.py \
         -base {params.basepath} \
-        -eve_netcdf_path {input.eve_netcdf_path}
+        -eve_netcdf_path {input.eve_netcdf_path}\
         -resolution {params.resolution}\
         -remove_off_limb {params.remove_off_limb}\
         -debug {params.debug}
