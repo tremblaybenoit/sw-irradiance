@@ -2,7 +2,7 @@
 DEBUG: False
 
 # AIA resolution to use
-RESOLUTION: 256
+RESOLUTION: 512
 
 # Whether to remove off limb or on not
 REMOVE_OFFLIMB: False
@@ -16,17 +16,24 @@ aia_path: "/mnt/miniset/aia-jsoc"
 # AIA preprocesed stack
 aia_stack_path: "/mnt/miniset/aia-stacks"
 
-# Location of FDL 2018 eve data
-eve_base_path: "/home/miraflorista/sw-irradiance/data/EVE"
-
 # Path to place all calculations
 sw-irr-output_path: "/home/andres_munoz_j/sw-irr-output"
 
+# Location of FDL 2018 eve data
+eve_base_path: "/home/miraflorista/sw-irradiance/data/EVE"
+
 # Model results
-model_results_path: "home/andres_munoz_j/model_results"
+model_results_path: "/home/andres_munoz_j/fdl2018-results"
+
+# NN config path
+nn_config_path: "/home/andres_munoz_j/sw-irradiance/config_residuals"
+
+# NN config file name (no extension)
+nn_config_file: "anet_3_bn_15"
 
 # Wildcards
 EVE-NORM-STATISTIC: ["mean","std"]
 AIA-NORM-STATISTIC: ["mean","sqrt_mean","std","sqrt_std"]
 SPLIT: ["train","test","val"]
-phase: ["test"]
+TRAIN_OUTPUTS: ["log.txt", "model.pt"]
+PHASE: ["test"]

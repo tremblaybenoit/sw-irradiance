@@ -11,7 +11,7 @@ rule create_eve_netcdf:
     input:
         eve_raw_path=config["eve_base_path"]+"/raw"
     output:
-        eve_netcdf_path= config["sw-irr-output_path"]+"/EVE_irradiance.nc"
+        eve_netcdf_path= config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/EVE_irradiance.nc"
     shell:
         "python fdleuvai/data/preprocess/create_eve_netcdf.py \
         -eve_raw_path {input.eve_raw_path} \
@@ -21,13 +21,13 @@ rule create_eve_netcdf:
 ## generates matches between EVE data and the AIA files
 rule generate_matches_time:
     input:
-        eve_netcdf_path = config["sw-irr-output_path"]+"/EVE_irradiance.nc",
+        eve_netcdf_path = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/EVE_irradiance.nc",
         aia_path = config["aia_path"]
     params:
-        match_outpath = config["sw-irr-output_path"],
+        match_outpath = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"]),
         debug = config["DEBUG"]
     output:
-        matches_output = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv"
+        matches_output = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/matches_eve_aia_171_193_211_304.csv"
     shell:
         """
         python fdleuvai/data/preprocess/generate_matches_time.py \
@@ -40,15 +40,15 @@ rule generate_matches_time:
 ## generates donwnscaled stacks of the AIA chanels
 rule generate_euv_image_stacks:
     input:
-        matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304.csv",
+        matches = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/matches_eve_aia_171_193_211_304.csv",
         aia_path = config["aia_path"]
     params:
-        stack_outpath = config["aia_stack_path"],
+        stack_outpath = config["aia_stack_path"]+"-"+str(config["RESOLUTION"]),
         resolution = config["RESOLUTION"],
         remove_off_limb = config["REMOVE_OFFLIMB"],
         debug = config["DEBUG"]
     output:
-        matches_output = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304_stacks.csv"
+        matches_output = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/matches_eve_aia_171_193_211_304_stacks.csv"
     shell:
         """
         python fdleuvai/data/preprocess/generate_euv_image_stacks.py \
@@ -63,9 +63,9 @@ rule generate_euv_image_stacks:
 ## generates train, test, values datasets 
 rule make_train_val_test_sets:
     input:
-        matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304_stacks.csv"
+        matches = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/matches_eve_aia_171_193_211_304_stacks.csv"
     output:
-        expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"])
+        expand(config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/{split}.csv",split = config["SPLIT"])
     shell:
         "python fdleuvai/data/preprocess/make_train_val_test_sets.py -src {input.matches} -splits rve"
         
@@ -77,17 +77,18 @@ rule make_train_val_test_sets:
 ## fits means and stds to linear model
 rule fit_linear_model:
     params:
-        basepath = config["sw-irr-output_path"],
+        basepath = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"]),
         resolution = config["RESOLUTION"],
         remove_off_limb = config["REMOVE_OFFLIMB"],
         debug = config["DEBUG"]
     input:
-      expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"]),
-      eve_netcdf_path=config["sw-irr-output_path"]+"/EVE_irradiance.nc"
+        matches = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/matches_eve_aia_171_193_211_304_stacks.csv",
+        splits = expand(config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/{split}.csv",split = config["SPLIT"]),
+        eve_netcdf_path=config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/EVE_irradiance.nc"
     output:
-        linear_preds =expand(config["sw-irr-output_path"]+"/EVE_linear_pred_{split}.nc",split = config["SPLIT"]),
-        # linear_stats =config["sw-irr-output_path"]+"/mean_std_feats.npz",
-        # eve_resid =config["sw-irr-output_path"]+"/eve_residual_{}_14ptot.npy"
+        linear_preds =expand(config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/EVE_linear_pred_{split}.nc",split = config["SPLIT"]),
+        # linear_stats =config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/mean_std_feats.npz",
+        # eve_resid =config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/eve_residual_{}_14ptot.npy"
 
     shell:
         """
@@ -101,17 +102,17 @@ rule fit_linear_model:
 ## Creates the normalization values based on the train set
 rule calculate_training_normalization:
     input:
-        matches = config["sw-irr-output_path"]+"/matches_eve_aia_171_193_211_304_stacks.csv",
-        splits = expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"]),
-        eve_netcdf_path = config["sw-irr-output_path"]+"/EVE_irradiance.nc"
+        matches = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/matches_eve_aia_171_193_211_304_stacks.csv",
+        splits = expand(config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/{split}.csv",split = config["SPLIT"]),
+        eve_netcdf_path = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/EVE_irradiance.nc"
     params:
-        basepath = config["sw-irr-output_path"],
+        basepath = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"]),
         resolution = config["RESOLUTION"],
         remove_off_limb = config["REMOVE_OFFLIMB"],
         debug = config["DEBUG"]
     output:
-        eve_norm_stats=expand(config["sw-irr-output_path"] + "/eve_{norm_stat}.npy", norm_stat=config["EVE-NORM-STATISTIC"]),
-        aia_norm_stats=expand(config["sw-irr-output_path"] + "/aia_{norm_stat}.npy", norm_stat=config["AIA-NORM-STATISTIC"])
+        eve_norm_stats=expand(config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"]) + "/eve_{norm_stat}.npy", norm_stat=config["EVE-NORM-STATISTIC"]),
+        aia_norm_stats=expand(config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"]) + "/aia_{norm_stat}.npy", norm_stat=config["AIA-NORM-STATISTIC"])
     shell:
         """
         python fdleuvai/data/preprocess/calculate_training_normalization.py \
@@ -124,27 +125,31 @@ rule calculate_training_normalization:
 ## train CNN
 rule train_CNN:
     input:
-        # means="eve_residual_mean_14ptot.npy",
-        # stds="eve_residual_std_14ptot.npy",
-        # norm_stats=expand("{path}/_{instrument}_{norm_stat}.npy",path=config["sw-irr-output_path"],instrument=config["INSTRUMENT"],norm_stat=config["NORM-STATISTIC"]),
-        eve_netcdf_path = config["sw-irr-output_path"]+"/EVE_irradiance.nc",
-        splits = expand(config["sw-irr-output_path"]+"/{split}.csv",split = config["SPLIT"]),
-        linear_preds =expand(config["sw-irr-output_path"]+"/EVE_linear_pred_{split}.nc",split = config["SPLIT"]),
-        # linear_stats =config["sw-irr-output_path"]+"/mean_std_feats.npz",
+        eve_netcdf_path = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/EVE_irradiance.nc",
+        matches = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/matches_eve_aia_171_193_211_304_stacks.csv",
+        splits = expand(config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/{split}.csv",split = config["SPLIT"]),
+        linear_preds =expand(config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])+"/EVE_linear_pred_{split}.nc",split = config["SPLIT"]),
+        eve_norm_stats=expand(config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"]) + "/eve_{norm_stat}.npy", norm_stat=config["EVE-NORM-STATISTIC"]),
+        aia_norm_stats=expand(config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"]) + "/aia_{norm_stat}.npy", norm_stat=config["AIA-NORM-STATISTIC"])
     output:
-        model = expand(config["sw-irr-output_path"]+"/EVE_linear_pred__{split}_model.pt",split = config["SPLIT"]),
-        log = expand(config["sw-irr-output_path"]+"/EVE_linear_pred__{split}_log.txt",split = config["SPLIT"]),
-        trained_loss = config["sw-irr-output_path"]+"trained_loss.npy",
-        val_loss = config["sw-irr-output_path"]+"val_loss.npy"
+        trained_loss = config["model_results_path"] + "/" + config["nn_config_file"] + "/train_loss.npy",
+        val_loss = config["model_results_path"] + "/" + config["nn_config_file"] + "/val_loss.npy",
+        model = expand(config["model_results_path"] + "/" + config["nn_config_file"] + "/" + config["nn_config_file"] + "_{train_outputs}", train_outputs=config["TRAIN_OUTPUTS"])        
     params:
-        data_path = config["sw-irr-output_path"],
-        model_results = config["model_results_path"]
+        data_path = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"]),
+        model_results = config["model_results_path"],
+        config_path = config["nn_config_path"],
+        model_results_path = config["model_results_path"],
+        remove_off_limb = config["REMOVE_OFFLIMB"],
+        debug = config["DEBUG"]
     shell:
         """
-        python fdl18_cdfg_residual_unified_train_to_tirr.py \
-        -src {params.data_path} \
-        -data_root {params.data_path} \
-        -target {params.model_results} #model results folder
+        python fdleuvai/models/fit_NN_models.py\
+        -src {params.config_path}\
+        -data_root {params.data_path}\
+        -target {params.model_results_path}\
+        -remove_off_limb {params.remove_off_limb}\
+        -debug {params.debug}
          """
 
 ## test data
@@ -155,9 +160,9 @@ rule test_CNN:
     output:
         errors = "errors.npy"
     params:
-        phase = config["phase"],
+        phase = config["PHASE"],
         model_results = config["model_results_path"],
-        data_path = config["sw-irr-output_path"]
+        data_path = config["sw-irr-output_path"]+"-"+str(config["RESOLUTION"])
 
     shell:
         """
