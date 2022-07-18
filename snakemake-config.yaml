@@ -1,5 +1,5 @@
 # debug flag this runs pipeline with only 10 files
-DEBUG: True
+DEBUG: False
 
 # AIA resolution to use
 RESOLUTION: 256
@@ -23,7 +23,7 @@ eve_base_path: "/home/miraflorista/sw-irradiance/data/EVE"
 sw-irr-matches_path: "/home/andres_munoz_j/eve-matches"
 
 # Path to place all calculations
-sw-irr-output_path: "/home/andres_munoz_j/sw-irr-output-test"
+sw-irr-output_path: "/home/andres_munoz_j/sw-irr-output"
 
 # NN config path
 nn_config_path: "/home/andres_munoz_j/sw-irradiance/config_residuals"
