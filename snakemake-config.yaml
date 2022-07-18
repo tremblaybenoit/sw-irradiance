@@ -2,7 +2,7 @@
 DEBUG: False
 
 # AIA resolution to use
-RESOLUTION: 512
+RESOLUTION: 256
 
 # Whether to remove off limb or on not
 REMOVE_OFFLIMB: False
@@ -16,14 +16,14 @@ aia_path: "/mnt/miniset/aia-jsoc"
 # AIA preprocesed stack
 aia_stack_path: "/mnt/miniset/aia-stacks"
 
-# Path to place all calculations
-sw-irr-output_path: "/home/andres_munoz_j/sw-irr-output"
-
 # Location of FDL 2018 eve data
 eve_base_path: "/home/miraflorista/sw-irradiance/data/EVE"
 
-# Model results
-model_results_path: "/home/andres_munoz_j/fdl2018-results"
+# Path to place all calculations
+sw-irr-matches_path: "/home/andres_munoz_j/eve-matches"
+
+# Path to place all calculations
+sw-irr-output_path: "/home/andres_munoz_j/sw-irr-output"
 
 # NN config path
 nn_config_path: "/home/andres_munoz_j/sw-irradiance/config_residuals"
