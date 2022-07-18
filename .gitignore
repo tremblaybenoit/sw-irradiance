@@ -7,3 +7,4 @@ data/EVE/raw/*.npy
 *.pyc
 __pycache__/
 wandb/
+*.h5
