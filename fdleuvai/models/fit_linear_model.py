@@ -57,7 +57,7 @@ def save_prediction(eve_data, line_indices, prediction, data_root, split, debug=
 
     matches = pd.read_csv(data_root+'/'+split+'.csv')
     if debug:
-        matches = matches.loc[0:4,:]
+        matches = matches.loc[0:10,:]
 
     # open database
     netcdfDB = Dataset(data_root + '/EVE_linear_pred_' + split + '.nc', "w", format="NETCDF4")
@@ -114,7 +114,7 @@ def getXy(eve_data, data_root, split, debug=True):
     matches = pd.read_csv(data_root+'/'+split+'.csv')
 
     if debug:
-        matches = matches.loc[0:4,:]
+        matches = matches.loc[0:10,:]
 
     y = eve_data[matches['eve_indices'].values,:]
 

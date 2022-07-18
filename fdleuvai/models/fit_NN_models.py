@@ -11,7 +11,6 @@ fitted linear model (see setup_residual_totirr.py)
 import sys
 sys.path.append('Utilities/') #add to pythonpath to get Dataset, hardcoded at the moment
 
-from SW_Dataset_bakeoff_totirr import SW_Dataset
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -30,11 +29,15 @@ import wandb
 wandb.login()
 
 # Add utils module to load stacks
-_FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-2]
+_FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-3]
 _FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
 sys.path.append(_FDLEUVAI_DIR)
 
+print(_FDLEUVAI_DIR)
+
 from fdleuvai.data.utils import str2bool
+from fdleuvai.models.Utilities.SW_Dataset_bakeoff_totirr import SW_Dataset
+
 
 ### just to helper to create net directories in results/
 def createFolder(directory):
@@ -209,8 +212,8 @@ if __name__ == "__main__":
         # logFile = "%s/%s_log.txt" % (targetBase, cfgName)
 
         print(modelFile)
-        if os.path.exists(modelFile) or isLocked(modelFile+".lock"):
-            continue
+        # if os.path.exists(modelFile) or isLocked(modelFile+".lock"):
+        #     continue
         
         sw_net = None
         
@@ -316,10 +319,8 @@ if __name__ == "__main__":
         training_time = time.time() - training_time
 
         ### save net, losses and info in corresponding net directory
-        torch.save(sw_net, modelFile)
-
-        torch.save(sw_net.state_dict(), "model.h5")
-        wandb.save('model.h5')
+        torch.save(sw_net.state_dict(), modelFile)
+        wandb.save(modelFile)
 
         np.save("%s/train_loss.npy" % targetBase, train_loss)
         np.save("%s/val_loss.npy" % targetBase, val_loss)
@@ -339,5 +340,5 @@ if __name__ == "__main__":
         F.write('Net architecture : \n' + str(sw_net))
         F.close()
 
-        unlock(modelFile+".lock")
+        # unlock(modelFile+".lock")
 

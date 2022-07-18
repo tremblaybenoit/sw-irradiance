@@ -194,7 +194,7 @@ class SW_Dataset(Dataset):
         self.EVE = full_EVE[self.index_eve,:]
         eve.close()
 
-        predictionDB = nc.Dataset( index_folder + 'EVE_linear_pred_' + split + '.nc')
+        predictionDB = nc.Dataset( index_folder + '/EVE_linear_pred_' + split + '.nc')
         self.EVE_residual = predictionDB.variables['irradiance'][:] - predictionDB.variables['pred_irradiance'][:]
         predictionDB.close()
 

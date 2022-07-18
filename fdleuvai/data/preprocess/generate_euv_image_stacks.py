@@ -80,7 +80,7 @@ if __name__ == "__main__":
     # Load indices
     matches = pd.read_csv(matches_file)
     if debug:
-        matches = matches.loc[0:9, :]
+        matches = matches.loc[0:10, :]
 
     # Benito: We could technically save this as a npy file and be done with it.
     # y = eve_data[matches['eve_indices'].values,:]
