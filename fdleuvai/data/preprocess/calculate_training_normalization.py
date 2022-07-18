@@ -28,6 +28,7 @@ LOG.setLevel(logging.INFO)
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-base',dest='base',required=True)
+    parser.add_argument('-eve_netcdf_path',dest='eve_netcdf_path',required=True)
     parser.add_argument('-remove_off_limb', dest='remove_off_limb', type=str2bool, default=False, help='Remove Off-limb')
     parser.add_argument('-debug', dest='debug', type=str2bool, default=False, help='Only process a few files')
     parser.add_argument('-resolution', dest='resolution', default=256, type=int)
@@ -50,11 +51,12 @@ if __name__ == "__main__":
     resolution = args.resolution
     global remove_off_limb
     remove_off_limb = args.remove_off_limb
+    eve_netcdf_path = args.eve_netcdf_path
 
     # Load nc file
-    LOG.info('Loading EVE_irradiance.nc')
-    eve = Dataset(args.base + 'EVE_irradiance.nc', "r", format="NETCDF4")
-    train = pd.read_csv(args.base+"/train.csv")
+    LOG.info(f'Loading {eve_netcdf_path}')
+    eve = Dataset(eve_netcdf_path, "r", format="NETCDF4")
+    train = pd.read_csv(args.base+"train.csv")
 
     if args.debug:
         train = train.loc[0:4,:]    

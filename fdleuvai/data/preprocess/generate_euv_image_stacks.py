@@ -53,6 +53,8 @@ def parse_args():
                    help='aia_path')
     p.add_argument('-matches', dest='matches', type=str, default="/home/andres_munoz_j/sw-irr-output/matches_eve_aia_171_193_211_304.csv",
                    help='matches')
+    p.add_argument('-matches_output', dest='matches_output', type=str, default="/home/andres_munoz_j/sw-irr-output/matches_eve_aia_171_193_211_304_stacks.csv",
+                   help='matches')
     p.add_argument('-stack_outpath', dest='stack_outpath', type=str, default="/mnt/miniset/aia-stacks",
                    help='out_path')
     p.add_argument('-debug', dest='debug', type=str2bool, default=False, help='Only process a few files')
@@ -71,6 +73,7 @@ if __name__ == "__main__":
     global stack_outpath
     stack_outpath = args.stack_outpath
     matches_file = args.matches
+    matches_output = args.matches_output
     global resolution
     resolution = args.resolution
     global remove_off_limb
@@ -114,7 +117,7 @@ if __name__ == "__main__":
     #         Or if we make a file for EVE, no need for this.
 
     matches['aia_stack'] = AIA_samples
-    matches.to_csv(matches_file.replace('.csv', '_stacks.csv'), index=False)
+    matches.to_csv(matches_output, index=False)
 
 
     

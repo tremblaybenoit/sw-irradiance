@@ -149,6 +149,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-src',dest='src',required=True)
     parser.add_argument('-target',dest='target',required=True)
+    parser.add_argument('-eve_netcdf_path',dest='eve_netcdf_path',required=True)
     parser.add_argument('-data_root',dest='data_root',required=True)
     parser.add_argument('-n_channels',dest='n_channels', default=4, type=int,
                         help='Number of SDO/AIA channels used.')
@@ -165,8 +166,8 @@ if __name__ == "__main__":
     debug = args.debug
     remove_off_limb = args.remove_off_limb
     data_root = args.data_root
-    EVE_path = "%s/EVE_irradiance.nc" % data_root
-    csv_dir = args.data_root    
+    EVE_path = args.eve_netcdf_path
+    csv_dir = args.data_root 
 
     #handle setup
     if not os.path.exists(args.target):
