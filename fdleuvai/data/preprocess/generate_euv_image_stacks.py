@@ -57,7 +57,7 @@ def parse_args():
                    help='out_path')
     p.add_argument('-debug', dest='debug', type=str2bool, default=False, help='Only process a few files')
     p.add_argument('-resolution', dest='resolution', type=int, default=256, help='Resolution of the output images')
-    p.add_argument('-remove_off_limb', dest='remove_off_limb', type=bool, default=False, help='Remove Off-limb')
+    p.add_argument('-remove_off_limb', dest='remove_off_limb', type=str2bool, default=False, help='Remove Off-limb')
     args = p.parse_args()
     return args 
 

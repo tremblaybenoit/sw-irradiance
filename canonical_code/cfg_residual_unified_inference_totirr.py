@@ -22,7 +22,15 @@ import argparse
 import json
 import pdb
 from scipy.special import logit
-import os
+import os,sys
+
+# Add utils module to load stacks
+_FDLEUVAI_DIR = os.path.abspath(__file__).split('/')[:-2]
+_FDLEUVAI_DIR = os.path.join('/',*_FDLEUVAI_DIR)
+sys.path.append(_FDLEUVAI_DIR)
+
+from fdleuvai.data.utils import str2bool
+
 ### just to helper to create net directories in results/
 def createFolder(directory):
     try:
@@ -101,7 +109,7 @@ def parse_args():
     parser.add_argument('-n_channels',dest='n_channels', default=4, type=int,
                         help='Number of SDO/AIA channels used.')
     parser.add_argument('-resolution', dest='resolution', default=256, type=int)
-    parser.add_argument('-remove_off_limb', dest='remove_off_limb', type=bool, default=False, help='Remove Off-limb')
+    parser.add_argument('-remove_off_limb', dest='remove_off_limb', type=str2bool, default=False, help='Remove Off-limb')
     parser.add_argument('-debug', dest='debug', type=str2bool, default=False, help='Only process a few files')
     args = parser.parse_args()
     return args
